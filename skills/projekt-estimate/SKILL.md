@@ -32,24 +32,24 @@ never re-queries that. If context is missing it warns and project lookups fail f
 
 ```bash
 # 1) ESTIMATE — fill issues missing estimated_hours (project = id | key | name)
-python3 "$SK/estimate_rollup.py" estimate WEB                 # DRY-RUN: proposed table, 0 writes
-python3 "$SK/estimate_rollup.py" estimate WEB --apply         # PUT estimated_hours + flag AI values
-python3 "$SK/estimate_rollup.py" estimate WEB --sprint <sid> --limit 20
-python3 "$SK/estimate_rollup.py" estimate WEB --no-ai         # skip AI; median-of-siblings only
-python3 "$SK/estimate_rollup.py" estimate WEB --include-zero  # also re-estimate 0h issues
+python3 "$SK/estimate_rollup.py" estimate --project WEB                 # DRY-RUN: proposed table, 0 writes
+python3 "$SK/estimate_rollup.py" estimate --project WEB --apply         # PUT estimated_hours + flag AI values
+python3 "$SK/estimate_rollup.py" estimate --project WEB --sprint <sid> --limit 20
+python3 "$SK/estimate_rollup.py" estimate --project WEB --no-ai         # skip AI; median-of-siblings only
+python3 "$SK/estimate_rollup.py" estimate --project WEB --include-zero  # also re-estimate 0h issues
 
 # 2) ROLLUP — deterministic planned vs logged hours per assignee (no model tokens)
-python3 "$SK/estimate_rollup.py" rollup WEB
-python3 "$SK/estimate_rollup.py" rollup WEB --date-from 2026-06-01 --date-to 2026-06-30
+python3 "$SK/estimate_rollup.py" rollup --project WEB
+python3 "$SK/estimate_rollup.py" rollup --project WEB --date-from 2026-06-01 --date-to 2026-06-30
 
 # 3) ROADMAP (optional) — list items, or create one
-python3 "$SK/estimate_rollup.py" roadmap WEB                                   # list (read-only)
-python3 "$SK/estimate_rollup.py" roadmap WEB --name "Q3 launch" --start-date 2026-07-01 --end-date 2026-09-30 --apply
+python3 "$SK/estimate_rollup.py" roadmap --project WEB                                   # list (read-only)
+python3 "$SK/estimate_rollup.py" roadmap --project WEB --name "Q3 launch" --start-date 2026-07-01 --end-date 2026-09-30 --apply
 ```
 
 ### Dry-run → apply (estimate)
 
-`estimate WEB` prints a table — `issue · points · hours · source · title` — plus a count
+`estimate --project WEB` prints a table — `issue · points · hours · source · title` — plus a count
 of how many values are AI/heuristic-derived. It writes **nothing**. Re-run with `--apply`
 to `PUT /issues/{id} {estimated_hours}` and tag each touched issue with the `ai-estimated`
 label so a human can confirm. Re-running `--apply` dedupes via the ledger (writes 0).

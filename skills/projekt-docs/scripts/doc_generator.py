@@ -179,8 +179,22 @@ def load_body(args: argparse.Namespace) -> str:
 
 # ── sub-command: upsert ───────────────────────────────────────────────────────
 
+def resolve_project_id(c: Client, raw: str) -> str:
+    """Map a project id/key/name to its UUID via the cached context (falls back to raw)."""
+    raw = (raw or "").strip()
+    projects = c.context().get("projects", [])
+    for p in projects:
+        if raw in (p.get("id"), p.get("key"), p.get("name")):
+            return p.get("id")
+    low = raw.lower()
+    for p in projects:
+        if low in ((p.get("key") or "").lower(), (p.get("name") or "").lower()):
+            return p.get("id")
+    return raw  # assume it is already a UUID
+
+
 def cmd_upsert(c: Client, led: Ledger, args: argparse.Namespace) -> int:
-    pid = args.project_id
+    pid = resolve_project_id(c, args.project)
     title = args.title.strip()
     if not title:
         eprint("✗ --title is required and must be non-empty.")
@@ -391,12 +405,12 @@ def build_parser() -> argparse.ArgumentParser:
         prog="doc_generator.py",
         description="Title-keyed UPSERT of Projekt project docs + issue bitácora + PDF export. "
                     "DRY-RUN by default; pass --apply to write.")
-    p.add_argument("--apply", action="store_true",
-                   help="Execute writes. Without it, prints a plan and writes nothing.")
     sub = p.add_subparsers(dest="cmd", required=True)
+    # --apply lives on each sub-command (consistent with the other projekt-* skills:
+    # `<cmd> … --apply`). Dry-run is the default everywhere.
 
     u = sub.add_parser("upsert", help="UPSERT a project doc by title (PATCH if exists, else POST).")
-    u.add_argument("--project-id", required=True, help="Project UUID.")
+    u.add_argument("--project", required=True, help="Project id, key or name (resolved from cached context).")
     u.add_argument("--title", required=True, help="Doc title — the idempotency key.")
     src = u.add_mutually_exclusive_group()
     src.add_argument("--body", default="",
@@ -404,12 +418,14 @@ def build_parser() -> argparse.ArgumentParser:
     src.add_argument("--body-file", help="Path to a markdown/text file for the body.")
     u.add_argument("--parent", help="Nest under this doc (title or UUID). Resolved from the doc list.")
     u.add_argument("--icon", help="Optional emoji/short id (≤8 chars), used on CREATE only.")
+    u.add_argument("--apply", action="store_true", help="Execute writes (default: dry-run).")
     u.set_defaults(func=cmd_upsert)
 
     b = sub.add_parser("bitacora", help="Regenerate the AI bitácora for one or more issues.")
     b.add_argument("--issue-ids", required=True, dest="issue_ids",
                    help="Comma-separated issue UUIDs.")
     b.add_argument("--locale", default="es", help="Bitácora locale (default es).")
+    b.add_argument("--apply", action="store_true", help="Execute writes (default: dry-run).")
     b.set_defaults(func=cmd_bitacora)
 
     d = sub.add_parser("pdf", help="Export issues as a PDF/markdown artifact saved to disk.")
@@ -422,6 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--title", default="Task Report", help="Document title in the export.")
     d.add_argument("--no-comments", action="store_true", help="Exclude comments.")
     d.add_argument("--no-attachments", action="store_true", help="Exclude attachments.")
+    d.add_argument("--apply", action="store_true", help="Execute writes (default: dry-run).")
     d.set_defaults(func=cmd_pdf)
     return p
 

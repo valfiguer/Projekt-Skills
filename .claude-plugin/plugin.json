@@ -1,7 +1,7 @@
 {
   "name": "projekt-skills",
   "description": "Connect a Projekt organization and automate issues, docs, workloads, estimations and time tracking through the Projekt REST API with your own Personal Access Token. Token-efficient, sequential, dry-run by default. Soporta español.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "3XA Design",
     "email": "dev@3xa.es"

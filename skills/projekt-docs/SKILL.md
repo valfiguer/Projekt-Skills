@@ -40,11 +40,11 @@ Markdown/plain text → minimal EditorJS blocks, then create-or-update by **titl
 ```bash
 # dry-run (shows CREATE vs UPDATE, parent, block counts)
 python3 "$SK/doc_generator.py" upsert \
-  --project-id <PID> --title "Runbook — Deploy" --body-file ./runbook.md
+  --project <PID|KEY|name> --title "Runbook — Deploy" --body-file ./runbook.md
 
 # apply
-python3 "$SK/doc_generator.py" --apply upsert \
-  --project-id <PID> --title "Runbook — Deploy" --body-file ./runbook.md
+python3 "$SK/doc_generator.py" upsert \
+  --project <PID|KEY|name> --title "Runbook — Deploy" --body-file ./runbook.md --apply
 ```
 
 - Body source: `--body "## text"`, `--body -` (stdin), or `--body-file path.md`.
@@ -58,8 +58,8 @@ paragraphs. Other lines become paragraphs (no inline-formatting parsing — Edit
 ### 2. Regenerate issue bitácora (AI logbook / HdU)
 
 ```bash
-python3 "$SK/doc_generator.py" bitacora --issue-ids <IID1>,<IID2>            # dry-run
-python3 "$SK/doc_generator.py" --apply bitacora --issue-ids <IID1>,<IID2> --locale es
+python3 "$SK/doc_generator.py" bitacora --issue-ids <IID1>,<IID2>                  # dry-run
+python3 "$SK/doc_generator.py" bitacora --issue-ids <IID1>,<IID2> --locale es --apply
 ```
 
 **503 (AI quota / model unavailable) = SOFT-SKIP**: the prior bitácora is left intact and reported as
@@ -69,8 +69,8 @@ skipped — never overwritten with an error. The run still exits 0 if the only f
 
 ```bash
 python3 "$SK/doc_generator.py" pdf --issue-ids <IID1>,<IID2>                  # dry-run
-python3 "$SK/doc_generator.py" --apply pdf --issue-ids <IID1>,<IID2> \
-  --format pdf --title "Sprint 12 report" --out ./sprint12.pdf
+python3 "$SK/doc_generator.py" pdf --issue-ids <IID1>,<IID2> \
+  --format pdf --title "Sprint 12 report" --out ./sprint12.pdf --apply
 ```
 
 Saves the **binary stream** to a file (`--out`, default `issues-export.<format>`). Do NOT try to render

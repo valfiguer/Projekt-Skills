@@ -541,7 +541,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     e = sub.add_parser("estimate", help="Fill missing estimated_hours (AI points->hours, 503->median).")
-    e.add_argument("project", help="Project id, key or name (resolved from cached context).")
+    e.add_argument("--project", required=True, help="Project id, key or name (resolved from cached context).")
     e.add_argument("--sprint", help="Restrict to a sprint_id.")
     e.add_argument("--limit", type=int, help="Cap how many issues to estimate this run.")
     e.add_argument("--all", action="store_true",
@@ -553,7 +553,7 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--apply", action="store_true", help="Execute PUTs (default = dry-run).")
 
     r = sub.add_parser("rollup", help="Plan vs actual hours per assignee (deterministic).")
-    r.add_argument("project", help="Project id, key or name (resolved from cached context).")
+    r.add_argument("--project", required=True, help="Project id, key or name (resolved from cached context).")
     r.add_argument("--sprint", help="Restrict to a sprint_id.")
     r.add_argument("--date-from", dest="date_from", help="Workload window start YYYY-MM-DD.")
     r.add_argument("--date-to", dest="date_to", help="Workload window end YYYY-MM-DD.")
@@ -562,7 +562,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "(accurate but expensive; capped at 300 issues — scope with --sprint).")
 
     rm = sub.add_parser("roadmap", help="List roadmap items, or --apply --name to create one.")
-    rm.add_argument("project", help="Project id, key or name (resolved from cached context).")
+    rm.add_argument("--project", required=True, help="Project id, key or name (resolved from cached context).")
     rm.add_argument("--name", help="Item name (required with --apply).")
     rm.add_argument("--item-type", dest="item_type", default="milestone",
                     help="milestone|epic|phase (default milestone).")
