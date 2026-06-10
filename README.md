@@ -22,7 +22,7 @@ One plugin, six skills (namespaced `projekt-skills:*`):
 ## Install
 
 ```text
-/plugin marketplace add 3XADesign/Projekt-Skills
+/plugin marketplace add valfiguer/Projekt-Skills
 /plugin install projekt-skills@3xa-projekt
 ```
 
