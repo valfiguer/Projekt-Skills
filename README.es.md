@@ -118,6 +118,10 @@ Un PAT lleva **tu rol completo** en **una** organización (sin acotar por endpoi
 
 ---
 
+## 📚 Documentación
+
+Wiki completa del proyecto en [`docs/`](docs/README.md) — instalación, configuración, arquitectura, una página por skill, la chuleta de la API, modelo de seguridad, resolución de problemas y una guía rápida en español. Empieza por [`docs/README.md`](docs/README.md) (en inglés; página ES: [`Guia-rapida-Espanol`](docs/Guia-rapida-Espanol.md)).
+
 ## Enlaces
 
 - Documentación para desarrolladores de Projekt: <https://projekt.3xa.es/developers/>

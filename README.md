@@ -118,6 +118,10 @@ A PAT carries **your full role** in **one** organization (no per-endpoint scopin
 
 ---
 
+## 📚 Documentation
+
+Full project wiki under [`docs/`](docs/README.md) — installation, configuration, architecture, a page per skill, the API cheatsheet, safety model, troubleshooting and a Spanish quick-guide. Start at [`docs/README.md`](docs/README.md).
+
 ## Links
 
 - Projekt developer docs: <https://projekt.3xa.es/developers/>
