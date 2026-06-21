@@ -217,7 +217,8 @@ def cmd_upsert(c: Client, led: Ledger, args: argparse.Namespace) -> int:
     print("  title   : %r" % title)
     print("  action  : %s%s" % (action, ("  → %s" % existing["id"]) if existing else ""))
     print("  parent  : %s" % (("%s → %s" % (args.parent, parent_id)) if parent_id else "(root)"))
-    print("  blocks  : %d  [%s]" % (len(editor["blocks"]), _block_summary(editor)))
+    print("  body    : markdown (%d chars) → server converts to EditorJS [~%d blocks: %s]"
+          % (len(raw), len(editor["blocks"]), _block_summary(editor)))
 
     dedupe_key = "%s|%s" % (pid, _norm(title))
     if led.seen("doc.upsert", dedupe_key):
@@ -230,13 +231,13 @@ def cmd_upsert(c: Client, led: Ledger, args: argparse.Namespace) -> int:
 
     print("\nfingerprint %s" % c.fingerprint())
     if existing:
-        body: dict = {"title": title, "blocks": editor}
+        body: dict = {"title": title, "markdown": raw}
         if args.parent is not None:
             body["parent_doc_id"] = parent_id  # explicit move (or null to lift to root)
         st, data = c.request("PATCH", "/projects/%s/docs/%s" % (pid, existing["id"]), body)
         op_status, ref = ("updated", existing["id"])
     else:
-        body = {"title": title, "blocks": editor}
+        body = {"title": title, "markdown": raw}
         if parent_id:
             body["parent_doc_id"] = parent_id
         if args.icon:

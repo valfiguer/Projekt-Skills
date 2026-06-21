@@ -35,7 +35,7 @@ All three are **dry-run by default**: they print a plan and write nothing until 
 
 ### 1. UPSERT a project doc (title-keyed, idempotent)
 
-Markdown/plain text → minimal EditorJS blocks, then create-or-update by **title**:
+Markdown → the server converts it to rich EditorJS blocks, then create-or-update by **title**:
 
 ```bash
 # dry-run (shows CREATE vs UPDATE, parent, block counts)
@@ -52,8 +52,10 @@ python3 "$SK/doc_generator.py" upsert \
 - `--icon 📘` is applied on CREATE only.
 - Re-running with the **same title** PATCHes the existing doc — it never creates a second one.
 
-Markdown supported: `#`..`######` headers, `-`/`*`/`+` bullets, `1.`/`1)` ordered lists, blank-line
-paragraphs. Other lines become paragraphs (no inline-formatting parsing — EditorJS keeps the raw text).
+The body is sent to the API as a **`markdown`** field (POST and PATCH both accept it) and the server's
+`EditorJsMarkdownConverter::fromMarkdown` builds the blocks — headers, bullet/ordered lists, **tables**,
+fenced **code**, callouts and inline formatting all round-trip. Read a doc back as Markdown with
+`?format=markdown`. (The dry-run's block count is an approximate local preview; the server result is richer.)
 
 ### 2. Regenerate issue bitácora (AI logbook / HdU)
 
@@ -110,8 +112,9 @@ not in the body untouched (so we send `title` + `blocks`, plus `parent_doc_id` o
 ## What it does NOT do
 
 - No hard delete (the API only soft-archives via `PATCH is_archived`; not exposed here).
-- No doc versions/backlinks/move-by-position, no rich inline formatting, no image/embed/table/callout
-  blocks (only header/paragraph/list) — discover those with `projekt/scripts/spec_lookup.sh` if needed.
+- No doc versions/backlinks/move-by-position, no image/embed blocks — discover those with
+  `projekt/scripts/spec_lookup.sh` if needed. (Tables, code and callouts DO work now — they come from
+  the server's Markdown converter, not the local block-builder.)
 - Does not author bitácora text itself (the server's AI does); this only triggers regeneration.
 
 ## Shared references
