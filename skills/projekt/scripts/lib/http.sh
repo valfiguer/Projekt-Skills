@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 # http.sh — shared HTTP layer for every Projekt skill script.
 #
-# Source it:   source "$(dirname "$0")/lib/http.sh"
-# Then call:   pj_req GET  /me
-#              pj_req POST /issues '{"project_id":"…","title":"…"}'
+# Targets the REWRITTEN /api/v1 API (org + project live in the PATH; resource is
+# `tasks`, not `issues`). Source it and pass FULL rewrite paths:
+#   source "$(dirname "$0")/lib/http.sh"
+#   pj_req GET  /auth/me
+#   pj_req GET  "/organizations/$ORG/projects/$PROJ/tasks?limit=50"
+#   pj_req POST "/organizations/$ORG/projects/$PROJ/tasks" '{"title":"…"}'
 #
-# Auth precedence mirrors the Projekt MCP (mcp/index.js) exactly:
+# Auth precedence:
 #   token    : $TREXA_API_TOKEN            > ~/.config/3xa-projekt/auth.json .token
-#   api_base : $TREXA_API_BASE             > auth.json .api_base > https://projekt.3xa.es/api
-#   org id   : $TREXA_ORG_ID               > .projekt-run/context.json .org_id > (resolved from /me)
+#   api_base : $TREXA_API_BASE             > auth.json .api_base > https://projekt.3xa.es/api/v1
+#   org id   : $TREXA_ORG_ID               > .projekt-run/context.json .org_id
+#              (self-discovered from /auth/me `api_key.organization_id`; still used
+#               only to build paths — the server reads org from the URL now.)
 #
-# Every request carries:  Authorization: Bearer <t>  +  X-Auth-Token: <t> (LiteSpeed
-# fallback)  +  X-Org-Id: <org>.  The token is NEVER printed — only a fingerprint.
+# Every request carries:  Authorization: Bearer <t>  +  X-Auth-Token: <t> (proxy
+# fallback)  +  X-Org-Id: <org> (harmless no-op on the rewrite; org is in the path).
+# The token is NEVER printed — only a fingerprint.
 # 429/5xx are retried with backoff driven by Retry-After / X-RateLimit-Reset.
 set -uo pipefail
 
@@ -37,7 +43,7 @@ pj_api_base() {
     local b; b=$(_pj_jq -r '.api_base // empty' "$PJ_AUTH_FILE")
     [ -n "$b" ] && { printf '%s' "${b%/}"; return; }
   fi
-  printf 'https://projekt.3xa.es/api'
+  printf 'https://projekt.3xa.es/api/v1'
 }
 
 pj_org_id() {

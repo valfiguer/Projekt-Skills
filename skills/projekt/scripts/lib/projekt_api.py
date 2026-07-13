@@ -1,22 +1,24 @@
 """projekt_api.py — shared Python client for Projekt skill scripts (stdlib only).
 
-Mirrors lib/http.sh exactly: same auth precedence, headers, rate-limit backoff,
-context cache and append-only ledger. Import from any skill script:
+Targets the REWRITTEN /api/v1 API: org + project live in the PATH, and the resource
+is `tasks` (not `issues`). Mirrors lib/http.sh: same auth precedence, headers,
+rate-limit backoff, context cache and append-only ledger. Import from any script:
 
     import sys, pathlib
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "projekt" / "scripts" / "lib"))
     from projekt_api import Client, Ledger, slim, eprint
 
     c = Client()                      # resolves token + org, raises with a hint if missing
-    status, data = c.request("GET", "/issues?project_id=%s&limit=50" % pid)
-    rows = slim("issue", data)
+    status, data = c.request(
+        "GET", "/organizations/%s/projects/%s/tasks?limit=50" % (c.org, pid))
+    rows = slim("task", data)
 
-NEVER prints the token (only a fingerprint). The 1.3 MB spec is never touched here.
+NEVER prints the token (only a fingerprint). The full spec is never touched here.
 """
 from __future__ import annotations
 import json, os, sys, time, urllib.request, urllib.error, pathlib, hashlib
 
-DEFAULT_BASE = "https://projekt.3xa.es/api"
+DEFAULT_BASE = "https://projekt.3xa.es/api/v1"
 AUTH_FILE = pathlib.Path(os.environ.get("PJ_AUTH_FILE",
               str(pathlib.Path.home() / ".config" / "3xa-projekt" / "auth.json")))
 RUN_DIR = pathlib.Path(os.environ.get("PJ_RUN_DIR", ".projekt-run"))
@@ -43,11 +45,14 @@ class Client:
             raise SystemExit("✗ No token. Set TREXA_API_TOKEN or create %s "
                              "(see references/auth-setup.md)." % AUTH_FILE)
         self.base = (os.environ.get("TREXA_API_BASE") or s.get("api_base") or DEFAULT_BASE).rstrip("/")
-        self.org = os.environ.get("TREXA_ORG_ID") or self._ctx_org()
+        self.org = os.environ.get("TREXA_ORG_ID") or self._ctx("org_id")
+        # project_id is self-discovered from /auth/me `api_key.project_id` for a
+        # project-scoped PAT; cached in context.json by context_sync.sh.
+        self.project = os.environ.get("TREXA_PROJECT_ID") or self._ctx("project_id")
 
-    def _ctx_org(self):
+    def _ctx(self, key):
         try:
-            return json.loads(CONTEXT_FILE.read_text()).get("org_id")
+            return json.loads(CONTEXT_FILE.read_text()).get(key)
         except Exception:
             return None
 
@@ -130,11 +135,21 @@ def _backoff(headers, attempt) -> int:
 
 
 # ── slim projections (mirror assets/slim.jq) ──
+# Rewrite API: tasks carry `reference` (e.g. PROJ-12) + `number`; status is one of
+# todo|in_progress|done|cancelled. "issue" kept as a backward-compat alias of "task".
+def _task_view(o):
+    return {"id": o.get("id"), "reference": o.get("reference") or o.get("key"),
+            "number": o.get("number"), "title": o.get("title"), "status": o.get("status"),
+            "assignee_id": o.get("assignee_id"), "estimated_hours": o.get("estimated_hours"),
+            "priority": o.get("priority"), "type": o.get("type")}
+
+
 _VIEWS = {
-    "issue":   lambda o: {k: o.get(k) for k in ("id", "key", "title", "status", "assignee_id", "estimated_hours", "priority")},
+    "task":    _task_view,
+    "issue":   _task_view,  # legacy alias
     "member":  lambda o: {"user_id": o.get("user_id") or o.get("id"), "name": o.get("name") or o.get("email"), "role": o.get("role")},
     "project": lambda o: {k: o.get(k) for k in ("id", "key", "name")},
-    "time":    lambda o: {k: o.get(k) for k in ("id", "issue_id", "user_id", "duration_minutes", "date")},
+    "time":    lambda o: {k: o.get(k) for k in ("id", "task_id", "issue_id", "user_id", "duration_minutes", "date")},
     "doc":     lambda o: {k: o.get(k) for k in ("id", "title", "parent_doc_id", "is_archived")},
 }
 
@@ -143,7 +158,7 @@ def _rows(data):
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
-        for k in ("data", "issues", "projects", "members", "entries"):
+        for k in ("data", "tasks", "issues", "projects", "members", "entries", "items"):
             if isinstance(data.get(k), list):
                 return data[k]
     return None

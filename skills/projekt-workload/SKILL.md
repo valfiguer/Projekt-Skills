@@ -12,6 +12,14 @@ allowed-tools: Read, Grep, Bash(python3:*), Bash(bash:*), Bash(jq:*)
 
 # Projekt — workload & capacity report (read-only)
 
+> **⚠ NOT YET PORTED to /api/v1.** The base URL is fixed (shares `projekt_api.py`, now on
+> `https://projekt.3xa.es/api/v1`), but the endpoint PATHS in `workload_report.py` are still the
+> **legacy flat** aggregates (`/workload`, `/workload/capacity`, `/capacity`, `/capacity/threshold`)
+> and **will 404** on the rewrite. To port: rediscover the equivalents under the org-scoped surface
+> (likely `/organizations/{org}/…`) with `bash ../projekt/scripts/spec_lookup.sh --search workload`
+> and `--search capacity`, then re-key rows on `user_id`. Working today: the `projekt` connect
+> (auth/context) + `projekt-issues` task create/list.
+
 One job: a **deterministic** team workload report. The script fetches the four server-side aggregates and
 computes every number itself — the model spends **no tokens on arithmetic** and writes nothing.
 

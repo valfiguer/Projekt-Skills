@@ -12,6 +12,15 @@ allowed-tools: Read, Grep, Bash(bash:*), Bash(python3:*)
 
 # projekt-context — AI-context store (memories ↔ docs)
 
+> **⚠ NOT YET PORTED to /api/v1.** The base URL is fixed (shares `projekt_api.py`, now on
+> `https://projekt.3xa.es/api/v1`), but the endpoint PATHS in `context_store.py` are still the
+> **legacy flat** docs ones (`/projects/{pid}/docs`, `/projects/{pid}/docs/{did}?format=markdown`)
+> and **will 404** on the rewrite. To port: docs live at
+> `/organizations/{org}/projects/{proj}/documents` (contract `paths/documents.yaml`; the
+> `?format=markdown` round-trip is preserved); confirm with
+> `bash ../projekt/scripts/spec_lookup.sh --search documents`. Working today: the `projekt` connect
+> (auth/context) + `projekt-issues` task create/list.
+
 Keep a codebase's **context memories** (architecture, gotchas, conventions, runbooks, decisions) as
 Projekt docs so any AI provider reads them over the API — `?format=markdown`, cheap — instead of
 re-deriving them by crawling the repo and burning tokens. Same idea as Serena's `.serena/memories/`,

@@ -13,7 +13,15 @@ allowed-tools: Read, Grep, Bash(python3:*), Bash(bash:*), Bash(jq:*)
 
 # Projekt — estimate & plan-vs-actual
 
-Fill missing issue estimates and report planned vs logged hours. One script, three
+> **⚠ NOT YET PORTED to /api/v1.** The base URL is fixed (shares `projekt_api.py`, now on
+> `https://projekt.3xa.es/api/v1`), but the endpoint PATHS in `estimate_rollup.py` are still the
+> **legacy flat** ones (`/issues?project_id=`, `PUT /issues/{id}`, `POST /ai/suggest-estimation`,
+> `/projects/{pid}/roadmap`, `/workload`) and **will 404** on the rewrite. To port: tasks live at
+> `/organizations/{org}/projects/{proj}/tasks` (update via **PATCH**, not PUT); rediscover the
+> estimation/roadmap/workload paths with `bash ../projekt/scripts/spec_lookup.sh --search estimation`.
+> Working today: the `projekt` connect (auth/context) + `projekt-issues` task create/list.
+
+Fill missing task estimates and report planned vs logged hours. One script, three
 subcommands: `estimate`, `rollup`, `roadmap`. **Dry-run by default; `--apply` to write.**
 
 `SK="${CLAUDE_SKILL_DIR}/scripts"` — use it for every command below.
