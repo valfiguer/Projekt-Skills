@@ -1,7 +1,7 @@
 {
   "name": "projekt-skills",
-  "description": "Connect a Projekt organization and automate issues, docs, workloads, estimations and time tracking through the Projekt REST API with your own Personal Access Token — and use Projekt as an AI-context store (memories ↔ docs, Serena-style). Token-efficient, Markdown-native, dry-run by default. Soporta español.",
-  "version": "0.3.0",
+  "description": "Connect a Projekt organization and automate tasks, docs, workloads, estimations and time tracking through the Projekt REST API with your own Personal Access Token — and use Projekt as an AI-context store (memories ↔ docs, Serena-style). Token-efficient, Markdown-native, dry-run by default. Soporta español.",
+  "version": "0.4.0",
   "author": {
     "name": "3XA Design",
     "email": "dev@3xa.es"

@@ -12,7 +12,16 @@ allowed-tools: Read, Grep, Bash(python3:*), Bash(bash:*), Bash(jq:*)
 
 # Projekt — time tracking
 
-Log time in bulk, run timers, and roll up time-summary for Projekt issues. This
+> **⚠ NOT YET PORTED to /api/v1.** The base URL is fixed (shares `projekt_api.py`, now on
+> `https://projekt.3xa.es/api/v1`), but the endpoint PATHS in `time_log.py` are still the **legacy
+> flat** ones (`/issues?q=`, `/projects/{pid}/issues/{iid}/time-entries`, `…/time-summary`) and
+> **will 404** on the rewrite. To port: resolve tasks via
+> `GET /organizations/{org}/projects/{proj}/tasks?q=<ref>` and log time under
+> `/organizations/{org}/projects/{proj}/tasks/{tid}/time-entries` (contract `paths/time-entries.yaml`;
+> confirm with `bash ../projekt/scripts/spec_lookup.sh --search time-entries`). Working today:
+> `projekt` connect + `projekt-issues` task create/list.
+
+Log time in bulk, run timers, and roll up time-summary for Projekt tasks. This
 is the **TIME** step of the `projekt` pipeline. `SK="${CLAUDE_SKILL_DIR}/scripts"`.
 
 ## Prerequisite — connect once

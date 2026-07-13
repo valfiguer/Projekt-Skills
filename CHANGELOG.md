@@ -3,6 +3,35 @@
 All notable changes to **projekt-skills** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-07-13
+
+Port to the rewritten **`/api/v1`** org-scoped API. `projekt.3xa.es` replaced its legacy flat PHP API
+with a contract-first rewrite: base is now `https://projekt.3xa.es/api/v1`, **org + project live in the
+URL path** (no more `X-Org-Id`-header + `project_id` query param), and the core resource is **`tasks`**
+instead of `issues`. The old skill broke entirely; this restores **CONNECT + REGISTER TASKS** end-to-end.
+
+### Changed
+- **Base URL** `…/api` → `…/api/v1` everywhere (`lib/http.sh`, `lib/projekt_api.py`, `references/auth-setup.md`, `references/endpoints.md`).
+- **Auth / self-discovery.** `auth_check.sh` now calls `GET /auth/me` and reads the PAT's own scope from
+  the response `api_key` object (`{id, name, organization_id, project_id}`) to self-discover the org **and**
+  project — a project-scoped key needs no config. Falls back to `GET /organizations` for the org when
+  `api_key` is absent (cookie/older key). `context.json` gains `project_id` + `key_name`.
+- **Context sync.** `context_sync.sh` uses `GET /organizations/{org}/projects` and
+  `GET /organizations/{org}/members`; a project-scoped key (which gets 403 listing projects) falls back to
+  a single-project context from the self-discovered `project_id`.
+- **Task creation (`projekt-issues`).** `bulk_issue_create.py` now `POST`s to
+  `/organizations/{org}/projects/{proj}/tasks` and sweeps `GET …/tasks` for dedupe. Because the rewrite's
+  create body has **no `assignee_id`** (a task is born `todo`), assignee + any working status are applied
+  via a follow-up `PATCH …/tasks/{id}`. Statuses normalized to `todo|in_progress|done|cancelled`; the
+  assignee-required rule now means "can't advance out of `todo` without an owner".
+- **Terminology** issues → tasks across the ported skill + endpoint cheatsheet.
+
+### Not yet ported (base URL fixed, endpoint paths still legacy — flagged with a TODO in each SKILL.md)
+- `projekt-estimate`, `projekt-time`, `projekt-workload`, `projekt-docs`, `projekt-context`, and
+  `projekt-issues`'s `assign_and_move.py` still call legacy flat paths (`/issues`, `/workload`,
+  `/projects/{pid}/docs`, `/ai/suggest-estimation`, …) and will 404 until re-pathed to the org-scoped
+  surface. Each SKILL.md documents the exact rewrite target + the `spec_lookup.sh` term to rediscover it.
+
 ## [0.3.0] — 2026-06-21
 
 AI-friendly Markdown round-trip + the AI-context store.

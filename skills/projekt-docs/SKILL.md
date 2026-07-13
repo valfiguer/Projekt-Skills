@@ -12,7 +12,16 @@ allowed-tools: Read, Grep, Bash(python3:*), Bash(bash:*), Bash(jq:*)
 
 # projekt-docs — docs, bitácora & PDF export
 
-UPSERT project docs by title (create-or-update), regenerate issue bitácoras, and export issues to PDF —
+> **⚠ NOT YET PORTED to /api/v1.** The base URL is fixed (shares `projekt_api.py`, now on
+> `https://projekt.3xa.es/api/v1`), but the endpoint PATHS in `doc_generator.py` are still the
+> **legacy flat** ones (`/projects/{pid}/docs`, `/issues/{iid}/bitacora/regenerate`,
+> `/issues/export-pdf`) and **will 404** on the rewrite. To port: docs live at
+> `/organizations/{org}/projects/{proj}/documents` (contract `paths/documents.yaml`; Markdown
+> round-trip via `?format=markdown` is preserved); rediscover bitácora/PDF-export paths with
+> `bash ../projekt/scripts/spec_lookup.sh --search documents`. Working today: `projekt` connect +
+> `projekt-issues` task create/list.
+
+UPSERT project docs by title (create-or-update), regenerate task bitácoras, and export tasks to PDF —
 all idempotent and dry-run-first. This is the **DOCUMENT** step of the `projekt` pipeline.
 
 `SK="${CLAUDE_SKILL_DIR}/scripts"` — use it for every command below.

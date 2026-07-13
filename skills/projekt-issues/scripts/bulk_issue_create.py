@@ -1,23 +1,38 @@
 #!/usr/bin/env python3
-"""bulk_issue_create.py — create Projekt issues in bulk from a CSV or JSON file.
+"""bulk_issue_create.py — create Projekt TASKS in bulk from a CSV or JSON file.
 
-There is NO bulk-create endpoint: /issues/bulk only MUTATES existing issues. So we
-create one-at-a-time with sequential POST /issues (concurrency capped at 3).
+Ported to the rewritten /api/v1 API: org + project live in the PATH and the
+resource is `tasks` (not `issues`). There is NO bulk-create endpoint, so we create
+one-at-a-time with sequential POST .../tasks (concurrency capped at 3).
+
+Rewrite specifics that shape this script:
+  · Endpoint: POST /organizations/{org}/projects/{project}/tasks
+              GET  /organizations/{org}/projects/{project}/tasks   (dedupe sweep)
+  · Create body: {title*, description?, priority?, type?, story_points?,
+                  estimated_hours?, start_date?, due_date?, sprint_id?, parent_id?}.
+    ASSIGNEE IS NOT SETTABLE ON CREATE — a task is born `todo` and unassigned.
+  · Assignee + a non-todo status are applied AFTER create via
+    PATCH /organizations/{org}/projects/{project}/tasks/{id} (TaskUpdateIn).
+  · Statuses are todo | in_progress | done | cancelled (localized/legacy names like
+    "Backlog"/"To Do"/"In Progress" are normalized here).
 
 Pipeline:
-  1. Resolve the target project by --project (key or name) from .projekt-run/context.json.
+  1. Resolve org + project. org + project self-discovered from context.json
+     (auth_check.sh reads the PAT's own api_key scope on /auth/me). --project may
+     still override the project by key/name/id from context.projects.
   2. Read rows (CSV columns of assets/import_template.csv, or a JSON list).
   3. Resolve each row's assignee (email or name) -> user_id from context.members.
-  4. Dedupe: sweep existing GET /issues for the project, skip any (project_id,title)
-     or external_ref already present; also skip anything the Ledger has already created.
+  4. Dedupe: sweep existing tasks for the project, skip any title or external_ref
+     already present; also skip anything the Ledger has already created.
   5. DRY-RUN (default): print a create/skip table. Nothing is written.
-  6. --apply: POST /issues for each create row, ≤3 in flight. Every create is logged
-     to the Ledger so re-runs are idempotent and resumable.
+  6. --apply: POST .../tasks for each row (≤3 in flight), then PATCH assignee and
+     (if requested) advance status. Every create is logged to the Ledger so
+     re-runs are idempotent and resumable.
 
-Assignee rule (references/errors.md): an issue cannot LEAVE Backlog/To Do without an
-assignee_id (422). Creating directly into a working column (In Progress / In Review /
-Done) without an assignee is therefore unsafe — such rows are demoted to "needs owner"
-and created in To Do instead (or skipped with --strict-status), never silently dropped.
+Assignee rule (references/errors.md): a task cannot ADVANCE out of `todo` into a
+working status (in_progress / done) without an assignee. Rows requesting a working
+status but lacking a resolvable assignee are LEFT in `todo` and flagged "needs
+owner" (never dropped). --strict-status skips them instead.
 
 Examples:
   python3 bulk_issue_create.py --project WEB --file backlog.csv          # dry-run
@@ -34,11 +49,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "projekt" / "scripts" / "lib"))
 from projekt_api import Client, Ledger, slim, eprint  # noqa: E402
 
-# Canonical board columns. "Backlog"/"To Do" are the only columns an issue may be
-# created into without an assignee per the assignee-required rule (errors.md).
-NON_WORKING = {"backlog", "to do", "todo", "to-do"}
-DEFAULT_STATUS = "Backlog"
-SAFE_STATUS = "To Do"  # where unassigned working-column rows get parked
+# Rewrite statuses. A task is created `todo`; it may not advance to a working
+# status without an assignee. Aliases map legacy/localized column names.
+TODO = "todo"
+STATUS_ALIASES = {
+    "todo": "todo", "to do": "todo", "to-do": "todo", "backlog": "todo",
+    "por hacer": "todo", "pendiente": "todo", "open": "todo", "nuevo": "todo",
+    "in_progress": "in_progress", "in progress": "in_progress", "in-progress": "in_progress",
+    "wip": "in_progress", "en progreso": "in_progress", "en curso": "in_progress",
+    "doing": "in_progress", "in review": "in_progress", "en revisión": "in_progress",
+    "done": "done", "closed": "done", "hecho": "done", "completado": "done", "cerrado": "done",
+    "cancelled": "cancelled", "canceled": "cancelled", "cancelado": "cancelled", "wontfix": "cancelled",
+}
+WORKING = {"in_progress", "done"}  # can't be reached from todo without an assignee
 CSV_COLS = ("title", "description", "status", "assignee", "estimated_hours",
             "priority", "type", "labels", "external_ref")
 
@@ -47,10 +70,9 @@ def _norm(s: str) -> str:
     return (s or "").strip().lower()
 
 
-def _is_working(status: str) -> bool:
-    """True for any column an issue can't sit in without an assignee."""
-    s = _norm(status)
-    return bool(s) and s not in NON_WORKING
+def norm_status(raw: str) -> str:
+    """Map any localized/legacy column name to a canonical rewrite status."""
+    return STATUS_ALIASES.get(_norm(raw), TODO)
 
 
 def load_rows(path: pathlib.Path) -> list[dict]:
@@ -58,20 +80,35 @@ def load_rows(path: pathlib.Path) -> list[dict]:
     text = path.read_text(encoding="utf-8-sig")
     if path.suffix.lower() == ".json":
         data = json.loads(text)
-        rows = data.get("issues", data) if isinstance(data, dict) else data
+        rows = data.get("issues", data.get("tasks", data)) if isinstance(data, dict) else data
         if not isinstance(rows, list):
-            raise SystemExit("✗ JSON must be a list of issue objects (or {issues:[…]}).")
+            raise SystemExit("✗ JSON must be a list of task objects (or {tasks:[…]}).")
         return [dict(r) for r in rows]
     rdr = csv.DictReader(text.splitlines())
     return [{k: (v or "").strip() for k, v in row.items()} for row in rdr]
 
 
-def resolve_project(ctx: dict, ref: str) -> dict:
+def resolve_project(ctx: dict, ref: str | None) -> dict:
+    """Resolve the target project. With no --project, use the self-discovered
+    project_id (project-scoped PAT); else the sole cached project; else require --project."""
+    projects = ctx.get("projects", [])
+    if not ref:
+        pid = ctx.get("project_id")
+        if pid:
+            for p in projects:
+                if str(p.get("id")) == str(pid):
+                    return p
+            return {"id": pid, "key": ctx.get("key_name"), "name": None}
+        if len(projects) == 1:
+            return projects[0]
+        keys = ", ".join(sorted(f"{p.get('key')}" for p in projects if p.get("key"))) or "(none)"
+        raise SystemExit("✗ No --project given and org has multiple projects. "
+                         "Pass --project <KEY>. Known keys: %s" % keys)
     ref_n = _norm(ref)
-    for p in ctx.get("projects", []):
+    for p in projects:
         if _norm(p.get("key")) == ref_n or _norm(p.get("name")) == ref_n or str(p.get("id")) == ref:
             return p
-    keys = ", ".join(sorted(f"{p.get('key')}" for p in ctx.get("projects", []) if p.get("key"))) or "(none)"
+    keys = ", ".join(sorted(f"{p.get('key')}" for p in projects if p.get("key"))) or "(none)"
     raise SystemExit("✗ Project %r not in context. Known keys: %s\n"
                      "  Run the projekt skill's context_sync.sh first." % (ref, keys))
 
@@ -97,15 +134,16 @@ def resolve_assignee(idx: dict[str, dict], raw: str) -> tuple[str | None, str | 
     return m.get("user_id"), None
 
 
-def existing_sweep(c: Client, pid: str) -> tuple[set[str], set[str]]:
-    """Sweep current issues of the project; return (titles_lower, external_refs)."""
+def existing_sweep(c: Client, org: str, pid: str) -> tuple[set[str], set[str]]:
+    """Sweep current tasks of the project; return (titles_lower, external_refs)."""
     titles: set[str] = set()
     refs: set[str] = set()
     offset, page = 0, 200
+    base = "/organizations/%s/projects/%s/tasks" % (org, pid)
     while True:
-        data = c.get_json("/issues?project_id=%s&limit=%d&offset=%d" % (pid, page, offset))
+        data = c.get_json("%s?limit=%d&offset=%d" % (base, page, offset))
         rows = data if isinstance(data, list) else (
-            data.get("data") or data.get("issues") or [] if isinstance(data, dict) else [])
+            data.get("data") or data.get("tasks") or data.get("issues") or [] if isinstance(data, dict) else [])
         if not rows:
             break
         for r in rows:
@@ -120,7 +158,7 @@ def existing_sweep(c: Client, pid: str) -> tuple[set[str], set[str]]:
     return titles, refs
 
 
-def plan_row(row: dict, pid: str, midx: dict[str, dict], ledger: Ledger,
+def plan_row(row: dict, midx: dict[str, dict], ledger: Ledger, dedupe_ns: str,
              have_titles: set[str], have_refs: set[str], strict_status: bool) -> dict:
     """Classify one row into a create/skip plan entry (no writes)."""
     title = (row.get("title") or "").strip()
@@ -128,17 +166,17 @@ def plan_row(row: dict, pid: str, midx: dict[str, dict], ledger: Ledger,
         return {"action": "skip", "title": "(blank)", "reason": "missing title"}
 
     ext = (row.get("external_ref") or "").strip()
-    dedupe_key = ext or "%s|%s" % (pid, _norm(title))
+    dedupe_key = ext or "%s|%s" % (dedupe_ns, _norm(title))
 
     if _norm(title) in have_titles:
         return {"action": "skip", "title": title, "reason": "title exists in project"}
     if ext and ext in have_refs:
         return {"action": "skip", "title": title, "reason": "external_ref exists: %s" % ext}
-    if ledger.seen("issue.create", dedupe_key):
+    if ledger.seen("task.create", dedupe_key):
         return {"action": "skip", "title": title, "reason": "already created (ledger)"}
 
     uid, aerr = resolve_assignee(midx, row.get("assignee", ""))
-    status = (row.get("status") or "").strip() or DEFAULT_STATUS
+    want_status = norm_status(row.get("status", ""))
     needs_owner = False
     note = None
 
@@ -146,91 +184,100 @@ def plan_row(row: dict, pid: str, midx: dict[str, dict], ledger: Ledger,
         note = aerr
         uid = None
 
-    # Assignee rule: a working column without an assignee is invalid. Park in To Do
-    # and flag "needs owner" rather than failing or dropping the row.
-    if _is_working(status) and not uid:
+    # Assignee rule: a task can't advance to a working status without an assignee.
+    # Leave it in `todo` and flag "needs owner" rather than failing or dropping.
+    if want_status in WORKING and not uid:
         if strict_status:
             return {"action": "skip", "title": title,
-                    "reason": "working status %r without assignee (strict)" % status}
+                    "reason": "working status %r without assignee (strict)" % want_status}
         needs_owner = True
-        note = (note + "; " if note else "") + "working status %r demoted to %s (needs owner)" % (status, SAFE_STATUS)
-        status = SAFE_STATUS
+        note = (note + "; " if note else "") + "status %r held at todo (needs owner)" % want_status
+        want_status = TODO
 
-    payload: dict = {"project_id": pid, "title": title, "status": status}
+    # Create body (assignee + status are applied via PATCH after create).
+    payload: dict = {"title": title}
     if row.get("description"):
         payload["description"] = row["description"]
-    if uid:
-        payload["assignee_id"] = uid
     if row.get("priority"):
-        payload["priority"] = row["priority"].strip()
+        payload["priority"] = _norm(row["priority"])
     if row.get("type"):
-        payload["type"] = row["type"].strip()
+        payload["type"] = _norm(row["type"])
     eh = (row.get("estimated_hours") or "").strip()
     if eh:
         try:
             payload["estimated_hours"] = float(eh) if "." in eh else int(eh)
         except ValueError:
             note = (note + "; " if note else "") + "bad estimated_hours %r ignored" % eh
-    labels = (row.get("labels") or "").strip()
-    if labels:
-        payload["labels"] = [t.strip() for t in labels.replace(",", ";").split(";") if t.strip()]
-    if ext:
-        payload["external_ref"] = ext
 
-    return {"action": "create", "title": title, "payload": payload,
-            "dedupe_key": dedupe_key, "needs_owner": needs_owner, "note": note}
+    return {"action": "create", "title": title, "payload": payload, "dedupe_key": dedupe_key,
+            "assignee_id": uid, "want_status": want_status, "needs_owner": needs_owner, "note": note}
 
 
 def print_plan(plan: list[dict], project: dict, c: Client) -> None:
     creates = [p for p in plan if p["action"] == "create"]
     skips = [p for p in plan if p["action"] == "skip"]
     owners = [p for p in creates if p.get("needs_owner")]
-    print("Project: %s — %s (%s)" % (project.get("key"), project.get("name"), project.get("id")))
+    print("Project: %s — %s (%s)" % (project.get("key") or "—", project.get("name") or "(scoped)", project.get("id")))
     print("Token:   %s | org %s" % (c.fingerprint(), c.org))
     print("Plan:    %d create · %d skip · %d need owner\n" % (len(creates), len(skips), len(owners)))
     print("  %-7s  %-40s  %-12s  %-10s  %s" % ("ACTION", "TITLE", "STATUS", "ASSIGNEE", "NOTE"))
     print("  " + "-" * 96)
     for p in plan:
         if p["action"] == "create":
-            pl = p["payload"]
             print("  %-7s  %-40.40s  %-12s  %-10s  %s" % (
-                "CREATE", p["title"], pl.get("status", ""),
-                (pl.get("assignee_id") or "—")[:10], p.get("note") or ""))
+                "CREATE", p["title"], p.get("want_status", TODO),
+                (p.get("assignee_id") or "—")[:10], p.get("note") or ""))
         else:
             print("  %-7s  %-40.40s  %-12s  %-10s  %s" % ("skip", p["title"], "", "", p["reason"]))
     if owners:
-        print("\n  ⚠ %d issue(s) need an owner (parked in %s, can't advance until assigned)."
-              % (len(owners), SAFE_STATUS))
+        print("\n  ⚠ %d task(s) need an owner (left in todo, can't advance until assigned)."
+              % len(owners))
 
 
-def do_create(c: Client, ledger: Ledger, entry: dict) -> tuple[dict, int, str]:
-    st, data = c.request("POST", "/issues", entry["payload"])
+def do_create(c: Client, ledger: Ledger, org: str, pid: str, entry: dict) -> tuple[dict, int, str]:
+    """POST the task, then PATCH assignee and (optionally) advance status."""
+    base = "/organizations/%s/projects/%s/tasks" % (org, pid)
     key = entry["dedupe_key"]
-    if 200 <= st < 300:
-        new = slim("issue", data)
-        iid = (new[0] if isinstance(new, list) and new else new) if new else {}
-        ref = iid.get("key") or iid.get("id") if isinstance(iid, dict) else None
-        ledger.add("create", "issue.create", key, "created", ref=ref)
-        return entry, st, "created %s" % (ref or "")
-    if st == 422:
-        ledger.add("create", "issue.create", key, "blocked", ref="422")
-        msg = data.get("message") or data.get("error") if isinstance(data, dict) else str(data)
-        return entry, st, "422 needs owner / validation: %s" % msg
-    if st == 403:
-        ledger.add("create", "issue.create", key, "error", ref="403")
-        return entry, st, "403 cross-org — stop, wrong token/org"
-    ledger.add("create", "issue.create", key, "error", ref=str(st))
-    msg = data.get("message") or data.get("error") if isinstance(data, dict) else str(data)
-    return entry, st, "HTTP %s: %s" % (st, msg)
+    st, data = c.request("POST", base, entry["payload"])
+    if not (200 <= st < 300):
+        if st == 403:
+            ledger.add("create", "task.create", key, "error", ref="403")
+            return entry, st, "403 cross-org/scope — stop, wrong token/org/project"
+        ledger.add("create", "task.create", key, "error", ref=str(st))
+        msg = data.get("message") or data.get("error") or data.get("detail") if isinstance(data, dict) else str(data)
+        return entry, st, "HTTP %s: %s" % (st, msg)
+
+    tslim = slim("task", data)
+    tobj = (tslim[0] if isinstance(tslim, list) and tslim else tslim) if tslim else {}
+    task_id = tobj.get("id") if isinstance(tobj, dict) else None
+    ref = tobj.get("reference") if isinstance(tobj, dict) else None
+    ledger.add("create", "task.create", key, "created", ref=ref or task_id)
+
+    # Post-create PATCHes (assignee first, then status) — mirrors the assignee rule.
+    patch: dict = {}
+    if entry.get("assignee_id"):
+        patch["assignee_id"] = entry["assignee_id"]
+    if entry.get("want_status") and entry["want_status"] != TODO:
+        patch["status"] = entry["want_status"]
+    if patch and task_id:
+        pst, pdata = c.request("PATCH", "%s/%s" % (base, task_id), patch)
+        if not (200 <= pst < 300):
+            note = ", ".join(sorted(patch))
+            msg = pdata.get("message") or pdata.get("error") or pdata.get("detail") if isinstance(pdata, dict) else str(pdata)
+            ledger.add("create", "task.update", key, "blocked" if pst == 422 else "error", ref=str(pst))
+            return entry, st, "created %s (⚠ %s patch %s: %s)" % (ref or "", note, pst, msg)
+    tail = " assigned" if entry.get("assignee_id") else ""
+    tail += " → %s" % entry["want_status"] if patch.get("status") else ""
+    return entry, st, "created %s%s" % (ref or "", tail)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Bulk-create Projekt issues from CSV/JSON (dry-run by default).")
-    ap.add_argument("--project", required=True, help="Project key, name, or id (resolved from context).")
+    ap = argparse.ArgumentParser(description="Bulk-create Projekt tasks from CSV/JSON (dry-run by default).")
+    ap.add_argument("--project", help="Project key, name, or id. Omit to use the PAT's own project scope.")
     ap.add_argument("--file", required=True, help="CSV (import_template columns) or .json list of rows.")
     ap.add_argument("--apply", action="store_true", help="Execute writes. Without it: dry-run only.")
     ap.add_argument("--strict-status", action="store_true",
-                    help="Skip (don't demote) rows targeting a working column with no assignee.")
+                    help="Skip (don't hold at todo) rows requesting a working status with no assignee.")
     ap.add_argument("--concurrency", type=int, default=3, help="Parallel POSTs (capped at 3).")
     args = ap.parse_args()
 
@@ -239,9 +286,9 @@ def main() -> int:
         raise SystemExit("✗ File not found: %s" % path)
 
     c = Client()
+    if not c.org:
+        raise SystemExit("✗ No org resolved. Run the projekt skill's auth_check.sh first.")
     ctx = c.context()
-    if not ctx.get("projects"):
-        raise SystemExit("✗ No context. Run the projekt skill's auth_check.sh + context_sync.sh first.")
 
     project = resolve_project(ctx, args.project)
     pid = project["id"]
@@ -252,46 +299,51 @@ def main() -> int:
         print("Nothing to do: file has 0 rows.")
         return 0
 
-    eprint("Sweeping existing issues for dedupe…")
-    have_titles, have_refs = existing_sweep(c, pid)
+    eprint("Sweeping existing tasks for dedupe…")
+    have_titles, have_refs = existing_sweep(c, c.org, pid)
     eprint("  found %d titles, %d external_refs already in project." % (len(have_titles), len(have_refs)))
 
-    plan = [plan_row(r, pid, midx, ledger, have_titles, have_refs, args.strict_status) for r in rows]
+    dedupe_ns = pid
+    plan = [plan_row(r, midx, ledger, dedupe_ns, have_titles, have_refs, args.strict_status) for r in rows]
     print_plan(plan, project, c)
 
     creates = [p for p in plan if p["action"] == "create"]
     if not args.apply:
-        print("\nDRY-RUN. Re-run with --apply to create %d issue(s). No writes were made." % len(creates))
+        print("\nDRY-RUN. Re-run with --apply to create %d task(s). No writes were made." % len(creates))
         return 0
     if not creates:
         print("\nNothing to create (all skipped). Ledger: %s" % ledger.summary())
         return 0
 
     conc = max(1, min(args.concurrency, 3))
-    print("\nApplying: creating %d issue(s) at concurrency %d…" % (len(creates), conc))
+    print("\nApplying: creating %d task(s) at concurrency %d…" % (len(creates), conc))
     ok = blocked = err = 0
     with ThreadPoolExecutor(max_workers=conc) as ex:
-        futs = {ex.submit(do_create, c, ledger, e): e for e in creates}
+        futs = {ex.submit(do_create, c, ledger, c.org, pid, e): e for e in creates}
         for fut in as_completed(futs):
             entry, st, msg = fut.result()
-            if 200 <= st < 300:
+            if 200 <= st < 300 and "⚠" not in msg:
                 ok += 1
                 tag = "✓"
-            elif st == 422:
+            elif st == 403:
+                err += 1
+                tag = "✗"
+            elif "⚠" in msg:
                 blocked += 1
                 tag = "⚠"
             else:
                 err += 1
                 tag = "✗"
             print("  %s %-40.40s %s" % (tag, entry["title"], msg))
-            if st == 403:  # cross-org is fatal for the whole batch
-                eprint("✗ 403 cross-org — aborting. Use the token bound to org %s." % c.org)
+            if st == 403:  # cross-org/scope is fatal for the whole batch
+                eprint("✗ 403 — aborting. Use a token scoped to org %s / project %s." % (c.org, pid))
                 break
 
-    print("\nDone. created=%d blocked(needs owner)=%d error=%d | ledger %s"
+    print("\nDone. created=%d partial(patch failed)=%d error=%d | ledger %s"
           % (ok, blocked, err, ledger.summary()))
     if blocked:
-        print("⚠ %d issue(s) were blocked as needs-owner — assign them, then re-run (idempotent)." % blocked)
+        print("⚠ %d task(s) were created but a follow-up assignee/status PATCH failed — "
+              "fix owners, then re-run (idempotent: create is skipped, PATCH retried)." % blocked)
     return 0 if err == 0 else 1
 
 

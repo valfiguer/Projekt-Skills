@@ -12,9 +12,17 @@ allowed-tools: Read, Grep, Bash(bash:*), Bash(python3:*), Bash(jq:*)
 
 # Projekt — orchestrator
 
-Drive the **Projekt** API (`projekt.3xa.es`) to automate issues, docs, workload, estimation and time.
+Drive the **Projekt** API (`projekt.3xa.es`) to automate tasks, docs, workload, estimation and time.
 This skill owns the pipeline and the safety rules; the `projekt-issues`, `projekt-estimate`,
 `projekt-workload`, `projekt-time` and `projekt-docs` skills are specialized steps it routes to.
+
+> **Rewrite (/api/v1):** the API was rebuilt. Base is `https://projekt.3xa.es/api/v1`; **org + project
+> live in the URL path**; the resource is **`tasks`** (not `issues`); statuses are
+> `todo|in_progress|done|cancelled`. A PAT **self-discovers** its org + project from `GET /auth/me`
+> (`api_key.organization_id` / `api_key.project_id`). Fully ported: `auth_check.sh`, `context_sync.sh`,
+> `lib/http.sh`, `lib/projekt_api.py`, `projekt-issues` create/list. **Not yet ported** (base URL only):
+> `projekt-estimate`, `projekt-time`, `projekt-workload`, `projekt-docs`, `assign_and_move.py` — their
+> endpoint paths still need porting (discover with `spec_lookup.sh`).
 
 `SK="${CLAUDE_SKILL_DIR}/scripts"` · `AS="${CLAUDE_SKILL_DIR}/assets"` — use these for every command below.
 
@@ -72,12 +80,16 @@ Domain map (clients, finance, payroll, CRM, HR, contracts, …) → `references/
 
 ## Calling the API directly
 
-Source the HTTP layer; it injects auth + `X-Org-Id` + rate-limit backoff:
+Source the HTTP layer; it injects auth + rate-limit backoff. Pass **full /api/v1 org-scoped paths**
+(org + project come from `.projekt-run/context.json` after `auth_check.sh`):
 
 ```bash
 source "$SK/lib/http.sh"
-pj_req GET  "/issues?project_id=$PID&limit=50" | jq -f "$AS/slim.jq" --arg view issue
-pj_req POST "/issues" '{"project_id":"…","title":"…","assignee_id":"…","status":"To Do"}'
+ORG="$(pj_org_id)"; PROJ="$(jq -r .project_id .projekt-run/context.json)"
+pj_req GET  "/organizations/$ORG/projects/$PROJ/tasks?limit=50" | jq -f "$AS/slim.jq" --arg view task
+# Create is title-only (assignee/status set via a follow-up PATCH):
+pj_req POST "/organizations/$ORG/projects/$PROJ/tasks" '{"title":"…","priority":"medium","type":"task"}'
+pj_req PATCH "/organizations/$ORG/projects/$PROJ/tasks/$TID" '{"assignee_id":"…","status":"in_progress"}'
 ```
 
 `pj_req` returns non-zero on 4xx/5xx and sets `PJ_LAST_STATUS`. Error handling → `references/errors.md`.
