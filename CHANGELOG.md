@@ -3,6 +3,31 @@
 All notable changes to **projekt-skills** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] — 2026-07-19
+
+### Fixed — Projekt API v1 migration (`projekt` orchestrator)
+
+The Projekt API moved to a **version prefix** + **org-scoped PATHS** (from flat paths +
+an `X-Org-Id` header) and now serves **JSON** (not YAML). The core scripts are updated:
+
+- **`lib/http.sh`** — API base default `…/api` → `…/api/v1`; added `pj_project_id`.
+- **`auth_check.sh`** — `GET /me` → `GET /auth/me` (flat user shape; org **and** project
+  pinned from `.api_key.{organization_id,project_id}`). Works with project-scoped PATs.
+- **`context_sync.sh`** — `/projects`+`/team` → `/organizations/{org}/…`; falls back to the
+  single scoped project when a project-scoped PAT can't list the org. Branches on the
+  command **exit code** (the `PJ_LAST_STATUS` var is set inside pj_req's subshell and does
+  not propagate to a `$()`-assignment).
+- **Spec discovery** — `fetch_spec.sh` → `/api/openapi.json`; `spec_index.sh` +
+  `spec_lookup.sh` rewritten from awk/YAML to **jq/JSON** (345 paths indexed).
+- **`references/endpoints.md`** + **`SKILL.md`** — rewritten for the org-scoped **`tasks`**
+  model (the entity is `tasks`, not `issues`; statuses are **per-project board columns**;
+  `status` is **ignored on create** → PATCH to move; `parent_id` for epics; children at
+  `…/tasks/{epic}/subtasks`).
+
+**Known / TODO:** the specialized sub-skills (`projekt-issues`, `projekt-estimate`,
+`projekt-time`, `projekt-docs`) still use the pre-v1 flat `/issues`|`/projects`|`/team`
+paths and need the same migration.
+
 ## [0.3.0] — 2026-06-21
 
 AI-friendly Markdown round-trip + the AI-context store.

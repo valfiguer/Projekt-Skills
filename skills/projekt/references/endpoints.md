@@ -1,61 +1,54 @@
-# Endpoint cheatsheet — automation core
+# Endpoint cheatsheet — automation core (current API, 2026-07)
 
-The ~90% of calls. For anything else, discover with `spec_lookup.sh --search <term>` then read the
-block. All paths are relative to the API base (`https://projekt.3xa.es/api`). Every authenticated call
-needs `Authorization: Bearer <pat>` + `X-Org-Id` (both injected by `lib/http.sh`).
+The API is **org-scoped in the PATH** (not via an `X-Org-Id` header) and **version-prefixed**.
+All paths are relative to the API base **`https://projekt.3xa.es/api/v1`** (`pj_api_base`;
+`pj_req` prepends it). Every authenticated call needs `Authorization: Bearer <pat>` (injected
+by `lib/http.sh`). A `pjk_live_` PAT is scoped to **one org** and often **one project**.
 
-Conventions: `:pid` = project id, `:iid` = issue id (UUIDs). Lists take `limit` (≤200; issues ≤5000) +
-`offset`. Reads should be piped through `slim.jq`.
+> Terminology: the UI says "incidencias/issues", but the **API entity is `tasks`**
+> (`type ∈ epic|story|task|bug|spike|chore`). There is **no** `/issues` collection.
+> Statuses are **per-project board columns**, not a fixed enum — read them, don't hardcode.
 
-## Identity & context
+## Identity & scope
 | Method · Path | Purpose | Notes |
 |---|---|---|
-| `GET /me` | Current user + current org + all orgs | `.user`, `.organization` (current), `.organizations[]`. No `X-Org-Id` needed. |
-| `GET /projects?limit=200` | Projects in the org | Returns a top-level **array**. `?include_shared=true` adds cross-org shares (read-only). |
-| `GET /team` | Org member roster | Array of `{id,name,email,role,department,position}`. |
+| `GET /auth/me` | Current user **+ the calling key's scope** | Flat `{ id, name, email, …, api_key:{ organization_id, project_id } }`. Pin `org_id=.api_key.organization_id`, `project_id=.api_key.project_id`. No `.organization`/`.organizations[]`. |
+| `GET /organizations` | Orgs the **user** belongs to | User-level (any key). `[{id,name,slug}]`. Use only to resolve an org **name**; a key can still only ACT on its own org. |
 
-## Issues
+**Project-scoped PAT** → `403` on org-level lists; `200` only under its own
+`/organizations/{org}/projects/{project}/…`. **Org-scoped PAT** → can list the org's projects/members.
+
+## Projects & members
+| Method · Path | Purpose | Notes |
+|---|---|---|
+| `GET /organizations/{org}/projects?limit=200` | List org projects | Top-level **array** `{id,key,name,status}`. `403` for a project-scoped key → use the single-project GET. |
+| `GET /organizations/{org}/projects/{project}` | One project | Works for a project-scoped key. |
+| `GET /organizations/{org}/members` | Org roster | `[{user_id,name,email,role}]`. `403` for a project-scoped key. |
+| `GET /organizations/{org}/projects/{project}/board-columns` | This project's statuses | `[{status_key,name,category,position}]`. `status_key` = a task's `.status` (e.g. `todo,in_progress,done,cancelled` + custom). |
+
+## Tasks (the "issues") — base `/organizations/{org}/projects/{project}/tasks`
 | Method · Path | Purpose | Required / gotcha |
 |---|---|---|
-| `GET /issues?project_id=:pid&status=&assignee_id=&sprint_id=&q=` | Filter/list | offset pagination; `q` full-text. |
-| `POST /issues` | Create | **required** `project_id`,`title`. Optional `status`(def Backlog),`priority`,`type`,`assignee_id`,`estimated_hours`,`labels`,`description`,`sprint_id`,`due_date`. |
-| `GET /issues/:iid` | Detail (incl. `comments[]`) | |
-| `PUT /issues/:iid` | Update (PATCH semantics) | `assignee_id:null` unassigns. **422** if moving Backlog/To Do→working without assignee. |
-| `POST /issues/bulk` | Bulk **mutate** existing | body `{issue_ids:[…], action, value}`. **Does NOT create.** Use for assign / status / priority / labels. |
-| `POST /issues/:iid/archive` · `/unarchive` | Soft-delete / restore | Hard delete not exposed. |
-| `POST /issues/:iid/duplicate` | Clone within project | |
-| `GET·POST /issues/:iid/comments` | Read / add comment | POST body `{text}` (markdown), optional `parent_id`. |
+| `GET .../tasks?limit=&status=&assignee_id=&sprint_id=&q=&type=` | List / filter | Top-level **array** of **top-level** tasks (a `parent_id` filter is ignored — use the subtasks route for children). |
+| `POST .../tasks` | Create | **required** `title`. Optional `type`(def `task`), `priority`(low/medium/high/urgent), `description`, `assignee_id`, `parent_id`, `sprint_id`, `story_points`, `estimated_hours`, `start_date`, `due_date`. **GOTCHA: `status` is IGNORED on create — a new task is always `todo`.** PATCH to set it. |
+| `GET .../tasks/{id}` | Detail | `reference` (`PJKT-1824`), `number`, `subtask_count`, `subtasks_done`. |
+| `PATCH .../tasks/{id}` | Partial update | Set `status` here (`{"status":"done"}`). `assignee_id:null` unassigns. **422** if moving out of a `todo` column **without** an `assignee_id` → assign first. |
+| `GET .../tasks/{epic}/subtasks` | Children of an epic/task | Returns **`{ "subtasks":[…] }`** (not a bare array). |
+| `DELETE .../tasks/{id}` | Delete | Sensitive — confirm first. |
 
-Bulk **create** has no endpoint → either `POST /imports/execute` (batch) or sequential `POST /issues`
-at concurrency ≤3. Dedupe by `(project_id,title)` + an `external_ref`.
+**Epic + children (verified):** create epic (`type:"epic"`) → capture `id` → create each child
+with `parent_id` + `assignee_id` → **PATCH `{status:"done"}`** per child (create ignores status).
 
-## Time tracking
-| Method · Path | Purpose | Notes |
-|---|---|---|
-| `POST /projects/:pid/issues/:iid/time-entries` | Log time | `{duration_minutes>0, date:"YYYY-MM-DD", description?}`. |
-| `POST …/time-entries/timer-start` · `timer-stop` | Timer | start idempotent (200 if running); stop rounds to ≥1 min. |
-| `GET /projects/:pid/issues/:iid/time-summary` | Aggregate | `{total_minutes, entry_count, per-user}`. Prefer over summing rows. |
+## Long tail (sprints · time · roadmap · docs · workload · finance · HR · …)
+The pre-2026 flat paths (`/issues`, `/team`, `/workload`, `/projects/:pid/…`) are **gone** — the
+whole surface moved under `/organizations/{org}/…` (and project resources under
+`/organizations/{org}/projects/{project}/…`). **Do NOT trust old flat paths.** Discover the exact
+current path before every non-core call:
 
-## Workload & capacity (read-only aggregates — do the math server-side)
-| Method · Path | Purpose |
-|---|---|
-| `GET /workload?date_from=&date_to=` | Per-member assigned / in-progress / done / hours |
-| `GET /workload/capacity` | Utilization vs capacity target |
-| `GET /capacity` · `GET /capacity/threshold` | Per-member open+estimated; org overload threshold |
+```bash
+bash "$SK/fetch_spec.sh"                                   # caches https://projekt.3xa.es/api/openapi.json
+bash "$SK/spec_lookup.sh" --search sprint                  # find candidates
+bash "$SK/spec_lookup.sh" "/organizations/{org}/projects/{project}/sprints" post
+```
 
-## Estimation & roadmap
-| Method · Path | Purpose | Gotcha |
-|---|---|---|
-| `POST /ai/suggest-estimation` | AI estimate | returns **story_points only** → convert via `units.md`. Rate bucket `ai` (10/min + daily); 503 when spent. |
-| `GET·POST /projects/:pid/roadmap` | Milestones/epics | `{name,start_date,end_date,progress,item_type,color}`. |
-| `POST /projects/:pid/roadmap/dependencies` | Link items | `{from,to}`; type auto-detected. |
-
-## Docs
-| Method · Path | Purpose | Notes |
-|---|---|---|
-| `GET·POST /projects/:pid/docs` | List / create | create needs `title`; body uses **EditorJS blocks** (object or JSON-string). `parent_doc_id` nests. |
-| `GET·PATCH /projects/:pid/docs/:did` | Fetch / update | PATCH `is_archived`,`blocks`,`title`,`position`. |
-| `POST /issues/:iid/bitacora/regenerate` | AI logbook (HdU) | 503 on AI quota → **soft-skip**, keep prior content. |
-| `GET /issues/export-pdf` | Issue digest PDF | fetch the artifact instead of rendering in-model. |
-
-See `domains.md` for the other 700+ endpoints (finance, payroll, CRM, inventory, …).
+`domains.md` maps domains → `spec_lookup` search terms. A PAT only reaches its own org/project.

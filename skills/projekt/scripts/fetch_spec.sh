@@ -9,9 +9,9 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PJ_SPEC_DIR="${PJ_SPEC_DIR:-$HOME/.cache/3xa-projekt}"
-SPEC_URL="${PROJEKT_SPEC_URL:-https://projekt.3xa.es/openapi.yaml}"
+SPEC_URL="${PROJEKT_SPEC_URL:-https://projekt.3xa.es/api/openapi.json}"
 mkdir -p "$PJ_SPEC_DIR"
-DEST="$PJ_SPEC_DIR/projekt.yaml"
+DEST="$PJ_SPEC_DIR/projekt.json"
 ETAG_FILE="$PJ_SPEC_DIR/.etag"
 
 if [ -n "${PROJEKT_SPEC:-}" ] && [ -f "$PROJEKT_SPEC" ]; then

@@ -37,12 +37,19 @@ pj_api_base() {
     local b; b=$(_pj_jq -r '.api_base // empty' "$PJ_AUTH_FILE")
     [ -n "$b" ] && { printf '%s' "${b%/}"; return; }
   fi
-  printf 'https://projekt.3xa.es/api'
+  printf 'https://projekt.3xa.es/api/v1'
 }
 
 pj_org_id() {
   [ -n "${TREXA_ORG_ID:-}" ] && { printf '%s' "$TREXA_ORG_ID"; return; }
   [ -f "$PJ_CONTEXT_FILE" ] && { _pj_jq -r '.org_id // empty' "$PJ_CONTEXT_FILE"; return; }
+  printf ''
+}
+
+# Project id the PAT is scoped to (current API PATs are often project-scoped).
+pj_project_id() {
+  [ -n "${TREXA_PROJECT_ID:-}" ] && { printf '%s' "$TREXA_PROJECT_ID"; return; }
+  [ -f "$PJ_CONTEXT_FILE" ] && { _pj_jq -r '.project_id // empty' "$PJ_CONTEXT_FILE"; return; }
   printf ''
 }
 

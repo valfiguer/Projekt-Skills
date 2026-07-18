@@ -76,11 +76,17 @@ Source the HTTP layer; it injects auth + `X-Org-Id` + rate-limit backoff:
 
 ```bash
 source "$SK/lib/http.sh"
-pj_req GET  "/issues?project_id=$PID&limit=50" | jq -f "$AS/slim.jq" --arg view issue
-pj_req POST "/issues" '{"project_id":"…","title":"…","assignee_id":"…","status":"To Do"}'
+ORG="$(pj_org_id)"; PID="$(pj_project_id)"          # from context.json after auth_check
+pj_req GET  "/organizations/$ORG/projects/$PID/tasks?limit=50" | jq -f "$AS/slim.jq" --arg view issue
+pj_req POST "/organizations/$ORG/projects/$PID/tasks" '{"title":"…","type":"task","assignee_id":"…"}'
+# NOTE: `status` is ignored on create (task is born `todo`) → move it afterwards:
+#   pj_req PATCH "/organizations/$ORG/projects/$PID/tasks/$ID" '{"status":"done"}'
 ```
 
-`pj_req` returns non-zero on 4xx/5xx and sets `PJ_LAST_STATUS`. Error handling → `references/errors.md`.
+The API is **org-scoped in the path** (`/organizations/{org}/…`), not via a header, and the
+entity is **`tasks`** (not `issues`). `pj_req` returns non-zero on 4xx/5xx and sets
+`PJ_LAST_STATUS` — but that variable is set inside a subshell, so **branch on the exit code of
+`X="$(pj_req …)"`, not on `PJ_LAST_STATUS` afterwards.** Error handling → `references/errors.md`.
 
 ## Guardrails in practice
 

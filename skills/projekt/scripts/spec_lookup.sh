@@ -9,7 +9,7 @@
 #   spec_lookup.sh --list finance             # list all paths whose tag/path ~ term
 set -uo pipefail
 PJ_SPEC_DIR="${PJ_SPEC_DIR:-$HOME/.cache/3xa-projekt}"
-SPEC="${PROJEKT_SPEC:-$PJ_SPEC_DIR/projekt.yaml}"
+SPEC="${PROJEKT_SPEC:-$PJ_SPEC_DIR/projekt.json}"
 INDEX="$PJ_SPEC_DIR/.index.tsv"
 
 _need_spec() { [ -f "$SPEC" ] || { echo "✗ Spec not cached. Run: bash \"$(dirname "$0")/fetch_spec.sh\"" >&2; exit 1; }; }
@@ -29,13 +29,14 @@ _need_spec
 PATH_ARG="$1"; METHOD="${2:-}"
 # Extract the exact path block: from the "  <path>:" key until the next col-0 or
 # col-2 key. index()-based match avoids regex-escaping {} and /.
-block="$(awk -v p="  $PATH_ARG:" '
-  index($0,p)==1 && substr($0,length(p)+1) ~ /^[[:space:]]*$/ { printing=1; print; next }
-  printing {
-    if ($0 ~ /^[^[:space:]]/) exit            # next top-level key
-    if ($0 ~ /^  [^[:space:]]/) exit          # next path key
-    print
-  }
+block="$(jq -r --arg p "$PATH_ARG" '
+  (.paths[$p] // {}) | to_entries[]
+  | select(.key | test("^(get|post|put|patch|delete|options|head)$"))
+  | "\(.key|ascii_upcase) \($p) — \(.value.summary // "-")"
+    + (if (.value.parameters|type)=="array" and (.value.parameters|length)>0
+         then "\n  params: " + ([.value.parameters[] | "\(.name // "ref")\(if .required then "*" else "" end)"] | join(", "))
+         else "" end)
+    + (if .value.requestBody then "\n  requestBody: " + ((.value.requestBody.content["application/json"].schema["$ref"] // "inline") | sub(".*/";"")) else "" end)
 ' "$SPEC")"
 
 [ -z "$block" ] && { echo "✗ Path not found: $PATH_ARG  (try: spec_lookup.sh --search ${PATH_ARG##*/})" >&2; exit 1; }
