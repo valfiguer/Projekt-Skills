@@ -10,7 +10,7 @@ Every mutating action **prints a plan and writes nothing** until you pass `--app
 - Re-run with `--apply` to execute.
 - Re-run again → dedupe (creates 0). See the [ledger](Architecture.md#idempotency--resume-the-ledger).
 
-Read-only skills (`projekt-workload`, `summary`, `rollup`, roadmap `list`) take no `--apply` and are always safe.
+Read-only skills (`pr-informes`, `summary`, `rollup`, roadmap `list`) take no `--apply` and are always safe.
 
 ## 2 — Second confirmation for destructive / sensitive paths
 
@@ -25,7 +25,7 @@ State the **blast radius** to the user before applying. The skills surface this;
 
 `hooks/guard.sh` (registered in `hooks/hooks.json` on `Bash`) is an independent backstop. It reads the pending Bash command and:
 
-- ignores anything that isn't Projekt API traffic (`projekt.3xa.es/api`, `pj_req`, or a `DELETE` request);
+- ignores anything that isn't Projekt API traffic (`projektrepublic.com/api`, `pj_req`, or a `DELETE` request);
 - lets it through if it already carries `--admit`;
 - otherwise **blocks** (exit 2) any command matching the sensitive regex — DELETE / `admin` / `finance` / `payroll` / `tax-multi` / `gl/` / `consolidation` / `gdpr` — with a message telling you to state the blast radius and re-run with `--admit`.
 
@@ -48,7 +48,7 @@ See [Configuration](Configuration.md) for where the token lives.
 
 ## The assignee-required rule
 
-Not security, but a safety invariant worth knowing: an issue **cannot leave `Backlog`/`To Do`** for a working column without an `assignee_id` (API returns **422 / `blocked_unassigned`**). The skills **assign first, then move**, and surface un-assignable items as **"needs owner"** rather than dropping them or failing the whole batch. See [projekt-issues](Skill-projekt-issues.md).
+Not security, but a safety invariant worth knowing: an issue **cannot leave `Backlog`/`To Do`** for a working column without an `assignee_id` (API returns **422 / `blocked_unassigned`**). The skills **assign first, then move**, and surface un-assignable items as **"needs owner"** rather than dropping them or failing the whole batch. See [pr](Skill-pr.md).
 
 ## What to do if something looks off
 

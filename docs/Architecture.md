@@ -7,25 +7,25 @@ How Projekt-Skills is put together, and **why it stays token-cheap**.
 ```
 projekt-skills (plugin)
 ├─ projekt            ← orchestrator: owns the pipeline, safety rules, shared scripts/refs
-├─ projekt-issues     ← CREATE + ASSIGN
-├─ projekt-estimate   ← ESTIMATE + plan-vs-actual
-├─ projekt-workload   ← REPORT (read-only)
-├─ projekt-time       ← TIME
-└─ projekt-docs       ← DOCUMENT
+├─ pr     ← CREATE + ASSIGN
+├─ pr-informes   ← ESTIMATE + plan-vs-actual
+├─ pr-informes   ← REPORT (read-only)
+├─ pr       ← TIME
+└─ pr-docs       ← DOCUMENT
 ```
 
-The five task skills are specialized steps. The **`projekt`** orchestrator routes to them and owns the shared contract — the HTTP layer, auth, context cache, ledger, spec lookup, and the reference docs. Every task skill connects through the orchestrator's scripts first (`auth_check.sh` → `context_sync.sh`) and reads the same `.projekt-run/context.json`.
+The five task skills are specialized steps. The **`pr`** orchestrator routes to them and owns the shared contract — the HTTP layer, auth, context cache, ledger, spec lookup, and the reference docs. Every task skill connects through the orchestrator's scripts first (`auth_check.sh` → `context_sync.sh`) and reads the same `.projekt-run/context.json`.
 
 ## Connect once, resolve forever
 
 ```bash
-bash skills/projekt/scripts/auth_check.sh     # resolves user + org + role
-bash skills/projekt/scripts/context_sync.sh   # caches projects + members
+bash skills/pr/scripts/auth_check.sh     # resolves user + org + role
+bash skills/pr/scripts/context_sync.sh   # caches projects + members
 ```
 
 `context_sync.sh` writes `.projekt-run/context.json` holding the org, projects and member roster. Every later name→id resolution (project key/name → UUID, assignee email/name → user_id) reads that file. **Identity is never re-queried** mid-run.
 
-> Note: **issues are not in `context.json`** (only projects + members). Skills that need an issue id (e.g. `projekt-time`) do a memoised lookup — expected, not a cache violation.
+> Note: **issues are not in `context.json`** (only projects + members). Skills that need an issue id (e.g. `pr`) do a memoised lookup — expected, not a cache violation.
 
 ## How it stays token-cheap
 
@@ -38,7 +38,7 @@ Four deliberate moves keep the model's context (and your bill) small:
 
 ## Shared scripts (orchestrator)
 
-Under `skills/projekt/scripts/`:
+Under `skills/pr/scripts/`:
 
 | Script | Role |
 | --- | --- |
@@ -51,19 +51,19 @@ Under `skills/projekt/scripts/`:
 | `lib/projekt_api.py` | Python client used by the task scripts: slim projections + ledger + the same auth/retry contract. |
 | `lib/run_ledger.sh` | Append-only ledger primitives (`pj_ledger_seen`, …). |
 
-Assets under `skills/projekt/assets/`:
+Assets under `skills/pr/assets/`:
 
 | Asset | Role |
 | --- | --- |
 | `slim.jq` | Field projections per view (`issue`/`member`/`project`/`time`/`doc`). |
 | `points_hours.json` | Story-points → hours map. The single source of truth for [estimation](Estimation-Units.md). |
-| `import_template.csv` | Column template for [bulk issue import](Skill-projekt-issues.md). |
+| `import_template.csv` | Column template for [bulk issue import](Skill-pr.md). |
 
 ## Calling the API directly
 
 ```bash
-source skills/projekt/scripts/lib/http.sh
-pj_req GET  "/issues?project_id=$PID&limit=50" | jq -f skills/projekt/assets/slim.jq --arg view issue
+source skills/pr/scripts/lib/http.sh
+pj_req GET  "/issues?project_id=$PID&limit=50" | jq -f skills/pr/assets/slim.jq --arg view issue
 pj_req POST "/issues" '{"project_id":"…","title":"…","assignee_id":"…","status":"To Do"}'
 ```
 

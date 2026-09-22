@@ -12,11 +12,11 @@ Projekt-Skills/
 │  │  ├─ scripts/          # auth_check, context_sync, spec_lookup, lib/http.sh, lib/projekt_api.py, …
 │  │  ├─ references/       # endpoints.md, domains.md, errors.md, units.md, auth-setup.md, recetas-es.md
 │  │  └─ assets/           # slim.jq, points_hours.json, import_template.csv
-│  ├─ projekt-issues/      # SKILL.md + scripts/{bulk_issue_create,assign_and_move}.py
-│  ├─ projekt-estimate/    # SKILL.md + scripts/estimate_rollup.py
-│  ├─ projekt-workload/    # SKILL.md + scripts/workload_report.py
-│  ├─ projekt-time/        # SKILL.md + scripts/time_log.py
-│  └─ projekt-docs/        # SKILL.md + scripts/doc_generator.py
+│  ├─ pr/      # SKILL.md + scripts/{bulk_issue_create,assign_and_move}.py
+│  ├─ pr-informes/    # SKILL.md + scripts/estimate_rollup.py
+│  ├─ pr-informes/    # SKILL.md + scripts/workload_report.py
+│  ├─ pr/        # SKILL.md + scripts/time_log.py
+│  └─ pr-docs/        # SKILL.md + scripts/doc_generator.py
 ├─ hooks/
 │  ├─ hooks.json           # PreToolUse(Bash) → guard.sh
 │  └─ guard.sh             # blocks sensitive API writes without --admit
@@ -41,7 +41,7 @@ Projekt-Skills/
 
 `.github/workflows/spec-drift-check.yml` runs `scripts/check_drift.sh`, which:
 
-1. Fetches the live spec (`PROJEKT_SPEC_URL`, default `https://projekt.3xa.es/openapi.yaml`).
+1. Fetches the live spec (`PROJEKT_SPEC_URL`, default `https://developers.projektrepublic.com/openapi.json`).
 2. Asserts each **core path** (the 16 the cheatsheet relies on — `/me`, `/projects`, `/issues`, `/issues/bulk`, `/workload`, `/ai/suggest-estimation`, the time-entry/summary paths, etc.) still exists.
 3. Exits non-zero (listing missing paths) on drift, so `references/endpoints.md` never silently rots.
 
@@ -53,8 +53,8 @@ bash scripts/check_drift.sh
 
 ## Adding / changing endpoints
 
-1. Confirm the real shape: `bash skills/projekt/scripts/spec_lookup.sh "/the/path" <method>`.
-2. Update `skills/projekt/references/endpoints.md` (and [API Endpoints](API-Endpoints.md) here if you keep the wiki in sync).
+1. Confirm the real shape: `bash skills/pr/scripts/spec_lookup.sh "/the/path" <method>`.
+2. Update `skills/pr/references/endpoints.md` (and [API Endpoints](API-Endpoints.md) here if you keep the wiki in sync).
 3. If it's a core path the cheatsheet depends on, add it to `CORE_PATHS` in `scripts/check_drift.sh`.
 
 ## Versioning & releases

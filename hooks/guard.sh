@@ -12,7 +12,7 @@ cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)"
 
 # Only consider Projekt API traffic.
 case "$cmd" in
-  *projekt.3xa.es/api*|*pj_req*|*'request("DELETE"'*|*"request('DELETE'"*) : ;;
+  *projektrepublic.com/api*|*pj_req*|*'request("DELETE"'*|*"request('DELETE'"*) : ;;
   *) exit 0 ;;
 esac
 

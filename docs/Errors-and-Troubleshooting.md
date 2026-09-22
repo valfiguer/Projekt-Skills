@@ -31,7 +31,7 @@ Board columns are per-project (`project.columns`). Canonical defaults: `Backlog`
 | "No token" from `auth_check.sh` | Set `TREXA_API_TOKEN` or create `~/.config/3xa-projekt/auth.json`. |
 | "No org resolved" | Set `TREXA_ORG_ID`, or switch your current org in Projekt. |
 | Import created fewer than expected | Dedupe kicked in — already-created rows (by `title`/`external_ref`) are skipped. Check the dry-run table. |
-| Issue won't move to In Progress | Assignee-required (422). Assign first via [projekt-issues](Skill-projekt-issues.md). |
+| Issue won't move to In Progress | Assignee-required (422). Assign first via [pr](Skill-pr.md). |
 | Estimates look ~3× too high | Stale `points_hours.json`. Recalibrate — see [Estimation Units](Estimation-Units.md). |
 | A sensitive write was blocked | The [guard hook](Safety-and-Security.md#3--the-pretooluse-guard-hook) stopped it. State the blast radius and re-run with `--admit`. |
 | PDF export is corrupt | `export-pdf` is **POST** and streams raw bytes — use the skill's `pdf` subcommand (it reads bytes); don't decode as text. |

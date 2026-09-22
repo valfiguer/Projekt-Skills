@@ -2,7 +2,7 @@
 
 The Projekt API exposes **800+ paths**. This page is the **automation-core cheatsheet** (~90% of calls) plus the map for reaching everything else on demand. The full 1.3 MB OpenAPI spec is **never** loaded into context.
 
-All paths are relative to the API base (`https://projekt.3xa.es/api`). Every authenticated call needs `Authorization: Bearer <pat>` + `X-Org-Id` — both injected by `lib/http.sh`. Conventions: `:pid` = project id, `:iid` = issue id (UUIDs). Lists take `limit` (≤200; issues ≤5000) + `offset`. Reads are piped through `slim.jq`.
+All paths are relative to the API base (`https://api.projektrepublic.com/api/v1`). Every authenticated call needs `Authorization: Bearer <pat>` + `X-Org-Id` — both injected by `lib/http.sh`. Conventions: `:pid` = project id, `:iid` = issue id (UUIDs). Lists take `limit` (≤200; issues ≤5000) + `offset`. Reads are piped through `slim.jq`.
 
 ## Identity & context
 
@@ -69,8 +69,8 @@ Do the math server-side.
 For anything outside the core, discover the path then read ONE block:
 
 ```bash
-bash skills/projekt/scripts/spec_lookup.sh --search "<term>"      # list matching paths
-bash skills/projekt/scripts/spec_lookup.sh "/exact/path" [method]  # print that block only
+bash skills/pr/scripts/spec_lookup.sh --search "<term>"      # list matching paths
+bash skills/pr/scripts/spec_lookup.sh "/exact/path" [method]  # print that block only
 ```
 
 > ⚠️ Anything under **admin / finance / payroll / tax / gl / consolidation / gdpr** is sensitive: state the blast radius and require a second confirmation (`--admit`) before any write. See [Safety & Security](Safety-and-Security.md).

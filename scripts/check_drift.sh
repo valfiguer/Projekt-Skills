@@ -3,7 +3,7 @@
 # OpenAPI spec, so references/endpoints.md never silently rots. Run by CI; also
 # usable locally. Exits non-zero (lists the missing paths) on drift.
 set -uo pipefail
-SPEC_URL="${PROJEKT_SPEC_URL:-https://projekt.3xa.es/openapi.yaml}"
+SPEC_URL="${PROJEKT_SPEC_URL:-https://developers.projektrepublic.com/openapi.json}"
 SPEC="$(mktemp)"
 trap 'rm -f "$SPEC"' EXIT
 
