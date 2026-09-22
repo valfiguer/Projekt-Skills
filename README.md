@@ -8,7 +8,7 @@
 
 ## What you get
 
-One plugin, six skills (namespaced `projekt-skills:*`):
+One plugin, eight skills (namespaced `projekt-skills:*`):
 
 | Skill | Does |
 | --- | --- |
@@ -18,6 +18,8 @@ One plugin, six skills (namespaced `projekt-skills:*`):
 | **`projekt-workload`** | Team capacity & workload reports (who's overloaded, utilization %). |
 | **`projekt-time`** | Batch-log time entries, timers, time roll-ups. |
 | **`projekt-docs`** | Create/maintain project docs, regenerate issue logbooks, export PDFs. |
+| **`projekt-context`** | Use Projekt as an AI-context store: mirror the repo's memories into docs and load them back as one cheap bundle. |
+| **`projekt-tokens`** | Measure what a session really costs (from the local transcripts — no API call), install the context rules into `CLAUDE.md`, and size the MCP catalogue by domain. |
 
 ---
 
@@ -115,6 +117,7 @@ A PAT carries **your full role** in **one** organization (no per-endpoint scopin
 - **Connect once:** auth + org + project/member roster resolve a single time and cache to `.projekt-run/context.json` for all name→id resolution.
 - **Slim at the edge:** API responses are projected down to a few fields with `jq` before Claude ever sees them.
 - **Math is deterministic:** roll-ups, reports and docs are built by bundled scripts; the model is spent only on genuinely new narrative.
+- **And it is measured, not claimed.** `projekt-tokens medir` reads the transcripts Claude Code already writes on your disk and prints the four billing buckets. On 18 real sessions (30,319 turns) **97.8 % of the tokens were cache reads** — the conversation re-sent on every turn — so the lever is context size × turns, not the tool catalogue. A `SessionStart` hook prints your cache-read-per-turn at startup; a `PreToolUse` hook notes (and, opt-in, blocks) the commands that dump the context.
 
 ---
 

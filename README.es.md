@@ -8,7 +8,7 @@
 
 ## Qué incluye
 
-Un plugin, seis skills (con espacio de nombres `projekt-skills:*`):
+Un plugin, ocho skills (con espacio de nombres `projekt-skills:*`):
 
 | Skill | Qué hace |
 | --- | --- |
@@ -18,6 +18,8 @@ Un plugin, seis skills (con espacio de nombres `projekt-skills:*`):
 | **`projekt-workload`** | Informes de capacidad y carga del equipo (quién está sobrecargado, % de utilización). |
 | **`projekt-time`** | Registra tiempos en lote, temporizadores y agregados de tiempo. |
 | **`projekt-docs`** | Crea/mantiene documentos del proyecto, regenera bitácoras de incidencias, exporta PDFs. |
+| **`projekt-context`** | Usa Projekt como almacén de contexto: espeja las memorias del repo como documentos y las carga de una vez. |
+| **`projekt-tokens`** | Mide lo que cuesta de verdad una sesión (desde las transcripciones locales, sin llamar a la API), instala las reglas de contexto en el `CLAUDE.md` y dimensiona el catálogo del MCP por dominios. |
 
 ---
 
@@ -115,6 +117,7 @@ Un PAT lleva **tu rol completo** en **una** organización (sin acotar por endpoi
 - **Conecta una vez:** auth + organización + lista de proyectos/miembros se resuelven una sola vez y se cachean en `.projekt-run/context.json` para toda resolución nombre→id.
 - **Adelgaza en el borde:** las respuestas de la API se proyectan a unos pocos campos con `jq` antes de que Claude las vea.
 - **Las cuentas son deterministas:** agregados, informes y documentos los construyen scripts incluidos; el modelo solo se gasta en narrativa genuinamente nueva.
+- **Y está medido, no afirmado.** `projekt-tokens medir` lee las transcripciones que Claude Code ya escribe en tu disco e imprime los cuatro cubos que se facturan. Sobre 18 sesiones reales (30.319 turnos), **el 97,8 % de los tokens fue lectura de caché** —la conversación reenviada en cada turno—, así que la palanca es el tamaño del contexto por los turnos, no el catálogo de herramientas. Un hook de `SessionStart` imprime tu lectura por turno al arrancar; otro de `PreToolUse` apunta (y, si lo pides, bloquea) los comandos que vuelcan el contexto.
 
 ---
 

@@ -3,6 +3,58 @@
 All notable changes to **projekt-skills** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-09-22
+
+### Added — `projekt-tokens`: medir lo que cuesta una sesión, y bajarlo
+
+Skill nueva más dos hooks. Nace de una medición, no de una intuición: sobre **18 sesiones
+reales de Claude Code (30.319 turnos)**, el reparto de tokens es
+
+```
+entrada                 106.209   0,0 %
+escritura de caché  293.100.824   2,0 %
+LECTURA DE CACHÉ 14.537.908.034  97,8 %
+salida               34.913.098   0,2 %
+```
+
+O sea que **lo que se paga no es lo que entra, sino lo que entra multiplicado por los
+turnos que quedan**: la conversación entera se reenvía en cada turno. En las sesiones
+grandes eso son 489k-550k tokens de lectura *por turno*. De los 16,77 M de caracteres que
+devolvieron las herramientas, el 82,6 % los devolvió `Bash` (sed 17,4 · grep 10,2 · cat
+4,2), y los resultados de ≥10.000 caracteres son el 0,7 % de las llamadas y solo el 12,8 %
+de los bytes: no hay un monstruo, son mil cortes. Por eso el catálogo del MCP —que viaja
+una vez por sesión y va cacheado— es el tercer comando de la skill y no el primero.
+
+- **`skills/projekt-tokens/scripts/medir.py`** — los cuatro cubos que se facturan, la
+  lectura por turno, la peor sesión, qué herramienta llenó el contexto, las familias de
+  comando dentro de `Bash` y los tres volcados más gordos con su comando. Sale todo de
+  `~/.claude/projects/<proyecto>/*.jsonl`: **no llama a ninguna API ni gasta un token**.
+  `--breve`, `--json`, `--todas`, `--proyecto`, `--max-mb`.
+- **`skills/projekt-tokens/scripts/instalar.py`** — mete las ocho reglas de contexto en el
+  `CLAUDE.md` del repo, entre marcas e idempotente (dry-run por defecto, `--apply` para
+  escribir, `--quitar` para retirarlas). Es la pieza que hace que la disciplina dure más
+  que la invocación de la skill: una skill solo está en contexto cuando se la llama, y
+  esto se decide en cada llamada.
+- **`skills/projekt-tokens/scripts/perfil_mcp.py`** — de una tarea a `?tools=<dominios>`
+  del conector, con bytes y tokens de cada perfil. Dice cuándo pedir dominios sale **más
+  caro** que `core`, que es la mitad que nadie cuenta.
+- **`skills/projekt-tokens/tarifas.json`** — tarjeta de tarifas fechada ($/MTok) con los
+  multiplicadores de caché (escritura 1,25x, lectura 0,1x). Rotulada como equivalencia:
+  una suscripción paga en límite de uso, no en dólares.
+- **`hooks/presupuesto_al_arrancar.sh`** (`SessionStart`) — dos líneas al arrancar con la
+  lectura por turno de la sesión anterior, y un aviso al pasar de 200.000. ~0,1 s.
+- **`hooks/aviso_de_tokens.sh`** (`PreToolUse` sobre `Bash`) — caza `cat` sin tope,
+  búsquedas recursivas sin `-l`/`-c`, `git log` sin `-n`, `git diff` entero y `find`/`ls -R`
+  sueltos. **Por defecto solo APUNTA** a un registro y deja pasar: bloquear cuesta un
+  turno, y un turno en una sesión cargada cuesta más que el volcado que evita.
+  `PROJEKT_TOKENS_ESTRICTO=1` lo endurece; `PROJEKT_TOKENS_SIN_AVISO=1` apaga los dos.
+- **`docs/Skill-projekt-tokens.md`** — la página de la skill, con la tabla de la medición.
+
+### Fixed
+
+- Los dos README decían «seis skills» y ya eran siete: faltaba `projekt-context`. Ahora
+  son ocho y están las dos que faltaban.
+
 ## [0.4.0] — 2026-07-13
 
 Port to the rewritten **`/api/v1`** org-scoped API. `projekt.3xa.es` replaced its legacy flat PHP API
