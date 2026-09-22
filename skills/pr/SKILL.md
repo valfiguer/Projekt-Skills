@@ -60,27 +60,50 @@ python3 "$SK/tiempo.py" summary --project WEB --date-from 2026-09-01 --date-to 2
 
 Detail per area: `references/tasks.md` · `references/time.md`.
 
-## Reaching any endpoint
+## The catalogue — all 917 operations
 
-685 paths. `references/endpoints.md` covers the automation core; `references/domains.md`
-maps the rest (finance, CRM, HR, chat, store…) to a search term.
+`references/catalogo.md` is the map: **685 paths · 917 operations · 16 domains**, how many of
+each are sensitive, and which `pr-*` script already covers them (80 do). It is **generated**
+from the spec by `scripts/catalogo.py`, so its numbers cannot drift the way the old
+hand-written notes did.
+
+The other 837 are reachable today — uncovered means "no convenience wrapper", not "out of
+reach". Three steps, none of which put the spec in context:
 
 ```bash
-bash "$SK/fetch_spec.sh"                      # once per session: cache + index the spec
-bash "$SK/spec_lookup.sh" --search invoice     # candidate paths from the index
-bash "$SK/spec_lookup.sh" "/api/v1/organizations/{org_id}/invoices" post   # ONE operation
+bash "$SK/fetch_spec.sh"                       # once per session: cache the spec + index
+bash "$SK/spec_lookup.sh" --domains            # the 16 domains with counts
+bash "$SK/spec_lookup.sh" --domain crm         # every operation in one domain
+bash "$SK/spec_lookup.sh" --sensitive          # everything the spec flags sensitive
+bash "$SK/spec_lookup.sh" --uncovered finance  # what has no wrapper yet
+bash "$SK/spec_lookup.sh" "«O»/crm/deals" post # ONE operation, in full — do this before calling
 ```
 
-Calling directly (the HTTP layer injects auth + rate-limit backoff):
+Then call it. `llamar.py` validates the path and method against the spec **before sending**,
+is dry-run for anything that is not a GET, refuses sensitive operations and every `DELETE`
+without `--admit`, and truncates the response so a list of invoices does not get re-read on
+every later turn:
+
+```bash
+python3 "$SK/llamar.py" GET  "«O»/crm/deals" --query limit=10
+python3 "$SK/llamar.py" POST "«O»/crm/deals" --body '{"title":"Acme"}'           # dry-run
+python3 "$SK/llamar.py" POST "«O»/crm/deals" --body @deal.json --apply
+python3 "$SK/llamar.py" GET  "«O»/invoices" --admit --out invoices.json
+```
+
+`«O»` is `/api/v1/organizations/{org_id}`; `{org_id}` and `{project_id}` come from the cached
+context, other placeholders from `--path name=value`.
+
+For the raw layer (the HTTP client injects auth + rate-limit backoff):
 
 ```bash
 source "$SK/lib/http.sh"
 ORG="$(pj_org_id)"; PROJ="$(jq -r .project_id .projekt-run/context.json)"
-pj_req GET  "/organizations/$ORG/projects/$PROJ/tasks?limit=50" | jq -f "$AS/slim.jq" --arg view task
-pj_req POST "/organizations/$ORG/projects/$PROJ/tasks" '{"title":"…","priority":"medium","assignee_id":"…"}'
+pj_req GET "/organizations/$ORG/projects/$PROJ/tasks?limit=50" | jq -f "$AS/slim.jq" --arg view task
 ```
 
-`pj_req` returns non-zero on 4xx/5xx and sets `PJ_LAST_STATUS`. Errors → `references/errors.md`.
+`pj_req` returns non-zero on 4xx/5xx; read the status with `pj_last_status` (it runs in a
+subshell, so `$PJ_LAST_STATUS` is stale). Errors → `references/errors.md`.
 
 ## What this skill does NOT do
 

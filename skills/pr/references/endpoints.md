@@ -73,5 +73,9 @@ Detail → `time.md`.
 `kind` is `file`.
 
 ## The rest
-685 paths in total: finance, payroll, CRM, HR, chat, store, BI, platform admin. Map →
-`domains.md`; then `spec_lookup.sh --search <term>` and read ONE block. Never `cat` the spec.
+
+This page is the automation core only. The **whole** surface — 685 paths, 917 operations, 16
+domains, with sensitivity and coverage per operation — is in `catalogo.md`, which is generated
+from the spec by `scripts/catalogo.py` rather than written by hand. Drill in with
+`spec_lookup.sh --domain <d>` / `--search <term>`, read ONE operation, then call it with
+`llamar.py`. Never `cat` the spec.

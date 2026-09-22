@@ -98,3 +98,41 @@ bash skills/pr/scripts/spec_lookup.sh "/exact/path" [method]  # print that block
 Counts drift as the API grows — `spec_lookup.sh --search <term>` is always the source of truth. If the cheatsheet and a lookup disagree, **trust the lookup** (the [drift CI](Contributing.md#spec-drift-ci) will flag it).
 
 See also: [Errors & Troubleshooting](Errors-and-Troubleshooting.md) for status codes and the retry policy.
+
+---
+
+## The generated catalogue
+
+This page is the automation core. The **complete** surface is generated, not written: the
+plugin ships `skills/pr/references/catalogo.md`, produced by `skills/pr/scripts/catalogo.py`
+from the cached spec — **685 paths · 917 operations · 16 domains**, with, per domain, how many
+operations are flagged sensitive and how many a `pr-*` script already drives.
+
+Regenerate it whenever the API moves:
+
+```bash
+bash skills/pr/scripts/fetch_spec.sh
+python3 skills/pr/scripts/catalogo.py --md --out skills/pr/references/catalogo.md
+```
+
+The full per-operation index (917 lines: method, path, domain, profile, sensitivity, tags,
+covering script, summary) is built into the spec cache by `spec_index.sh` and is meant to be
+grepped through `spec_lookup.sh`, never read into a model context:
+
+```bash
+bash skills/pr/scripts/spec_lookup.sh --domains           # the 16 domains with counts
+bash skills/pr/scripts/spec_lookup.sh --domain finance    # one domain
+bash skills/pr/scripts/spec_lookup.sh --sensitive         # everything flagged sensitive
+bash skills/pr/scripts/spec_lookup.sh --uncovered crm     # no wrapper yet
+bash skills/pr/scripts/spec_lookup.sh "«O»/crm/deals" post   # ONE operation, in full
+```
+
+Anything in the catalogue can then be called with `llamar.py`, which validates against the
+spec before sending, is dry-run for writes, refuses sensitive operations and every `DELETE`
+without `--admit`, and caps the printed response.
+
+**A note on where the metadata comes from.** `x-tool` (domain, profile, sensitivity) exists in
+the hand-authored contract but is **stripped from the spec FastAPI serves**. `fetch_spec.sh`
+therefore pulls from `https://developers.projektrepublic.com/openapi.json`, the contract
+bundle, on purpose — the served spec at `api.projektrepublic.com/api/openapi.json` has the
+same 685 paths but zero `x-tool`, so a catalogue built from it would have no domains at all.

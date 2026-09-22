@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Official marketplace for the Projekt Republic automation skills.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "projekt-skills",
       "source": "./",
-      "description": "Automate Projekt Republic (tasks, time, documents, workload, estimates) via the REST API with a PAT, and measure + cut what a coding session costs in tokens. Four skills, token-efficient, dry-run by default.",
-      "version": "1.0.0",
+      "description": "Automate Projekt Republic over a generated catalogue of its 917 operations: tasks, time, documents, workload and estimates have wrappers, everything else is one guarded CLI call away. Plus token-cost measurement. Dry-run by default.",
+      "version": "1.1.0",
       "author": {
         "name": "3XA Design"
       },

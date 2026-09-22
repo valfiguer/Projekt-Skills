@@ -10,7 +10,7 @@ Projekt-Skills/
 ├─ skills/
 │  ├─ projekt/             # orchestrator: SKILL.md + scripts/ + references/ + assets/
 │  │  ├─ scripts/          # auth_check, context_sync, spec_lookup, lib/http.sh, lib/projekt_api.py, …
-│  │  ├─ references/       # endpoints.md, domains.md, errors.md, units.md, auth-setup.md, recetas-es.md
+│  │  ├─ references/       # catalogo.md (generado), endpoints.md, tasks.md, time.md, errors.md, limits.md, units.md, auth-setup.md, recetas-es.md
 │  │  └─ assets/           # slim.jq, points_hours.json, import_template.csv
 │  ├─ pr/      # SKILL.md + scripts/{bulk_issue_create,assign_and_move}.py
 │  ├─ pr-informes/    # SKILL.md + scripts/estimate_rollup.py
