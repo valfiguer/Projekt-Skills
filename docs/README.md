@@ -18,7 +18,9 @@ One plugin, six skills (namespaced `projekt-skills:*`), driven by your own Perso
 | Stay safe (dry-run, guard hook, secrets) | **[Safety & Security](Safety-and-Security.md)** |
 | Fix an error / read the retry policy | **[Errors & Troubleshooting](Errors-and-Troubleshooting.md)** |
 
-## The six skills
+## The skill pages
+
+(One page per skill. `projekt-context` ships in the plugin but has no page yet — its `SKILL.md` documents it.)
 
 | Skill | Page | Does |
 | --- | --- | --- |
@@ -28,6 +30,7 @@ One plugin, six skills (namespaced `projekt-skills:*`), driven by your own Perso
 | **`projekt-workload`** | [projekt-workload](Skill-projekt-workload.md) | Read-only team capacity & workload reports. |
 | **`projekt-time`** | [projekt-time](Skill-projekt-time.md) | Batch-log time, drive timers, time roll-ups. |
 | **`projekt-docs`** | [projekt-docs](Skill-projekt-docs.md) | UPSERT project docs, regenerate issue logbooks, export PDFs. |
+| **`projekt-tokens`** | [projekt-tokens](Skill-projekt-tokens.md) | Measure a session's real token cost from the local transcripts, install the context rules, size the MCP catalogue. |
 
 ## Reference
 

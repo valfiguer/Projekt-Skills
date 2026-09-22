@@ -1,0 +1,29 @@
+{
+  "_comentario": [
+    "Tarjeta de tarifas en $/MTok de la API de primera parte de Anthropic.",
+    "Bedrock y Vertex son operados por el partner y tienen precio aparte.",
+    "Los multiplicadores de cache son sobre el precio de ENTRADA del modelo:",
+    "escribir en cache cuesta 1,25x y leer de cache 0,1x, salvo donde el modelo",
+    "declare su propio precio de lectura (campo `lectura_de_cache`).",
+    "Esto NO es una factura: en una suscripcion los tokens se pagan en limite de",
+    "uso, no en dolares. Sirve para ordenar magnitudes y comparar dos semanas."
+  ],
+  "fecha": "2026-06-24",
+  "fuente": "tabla de modelos de la skill `claude-api` de Claude Code",
+  "multiplicadores": {
+    "escritura_de_cache": 1.25,
+    "lectura_de_cache": 0.1
+  },
+  "modelos": {
+    "claude-fable-5-1": { "entrada": 10.0, "salida": 50.0, "lectura_de_cache": 0.25 },
+    "claude-mythos-5-1": { "entrada": 10.0, "salida": 50.0 },
+    "claude-fable-5": { "entrada": 10.0, "salida": 50.0 },
+    "claude-opus-5": { "entrada": 5.0, "salida": 25.0 },
+    "claude-opus-4-8": { "entrada": 5.0, "salida": 25.0 },
+    "claude-opus-4-7": { "entrada": 5.0, "salida": 25.0 },
+    "claude-opus-4-6": { "entrada": 5.0, "salida": 25.0 },
+    "claude-sonnet-5": { "entrada": 2.0, "salida": 10.0 },
+    "claude-sonnet-4-6": { "entrada": 3.0, "salida": 15.0 },
+    "claude-haiku-4-5": { "entrada": 1.0, "salida": 5.0 }
+  }
+}
