@@ -23,7 +23,7 @@ if command -v jq >/dev/null 2>&1 && [ -n "$entrada" ]; then
 fi
 [ -z "$cwd" ] && cwd="$PWD"
 
-medir="${CLAUDE_PLUGIN_ROOT}/skills/projekt-tokens/scripts/medir.py"
+medir="${CLAUDE_PLUGIN_ROOT}/skills/pr-tokens/scripts/medir.py"
 [ -f "$medir" ] || exit 0
 
 # --max-mb: una transcripción enorme se salta en vez de hacer esperar al arranque.
@@ -32,5 +32,5 @@ salida="$(python3 "$medir" --proyecto "$cwd" --breve --max-mb 40 \
 [ -z "$salida" ] && exit 0
 
 printf '%s\n' "$salida"
-printf 'Las reglas de contexto de este repo están en su CLAUDE.md (bloque projekt-tokens); el detalle, con /projekt-tokens.\n'
+printf 'Las reglas de contexto de este repo están en su CLAUDE.md (bloque projekt-tokens); el detalle, con /pr-tokens.\n'
 exit 0

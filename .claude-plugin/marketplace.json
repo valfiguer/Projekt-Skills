@@ -5,19 +5,28 @@
     "email": "dev@3xa.es"
   },
   "metadata": {
-    "description": "Official 3XA marketplace for Projekt automation skills.",
-    "version": "0.5.0"
+    "description": "Official marketplace for the Projekt Republic automation skills.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "projekt-skills",
       "source": "./",
-      "description": "Automate Projekt (tasks, docs, workloads, estimations, time) via the REST API with a PAT, and measure + cut what a coding session costs in tokens. Token-efficient and dry-run by default.",
-      "version": "0.5.0",
-      "author": { "name": "3XA Design" },
-      "homepage": "https://projekt.3xa.es/developers/",
+      "description": "Automate Projekt Republic (tasks, time, documents, workload, estimates) via the REST API with a PAT, and measure + cut what a coding session costs in tokens. Four skills, token-efficient, dry-run by default.",
+      "version": "1.0.0",
+      "author": {
+        "name": "3XA Design"
+      },
+      "homepage": "https://developers.projektrepublic.com/developers",
       "license": "MIT",
-      "keywords": ["projekt", "automation", "project-management", "api"]
+      "keywords": [
+        "projekt",
+        "projekt-republic",
+        "automation",
+        "project-management",
+        "api",
+        "tokens"
+      ]
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Projekt-Skills Wiki
 
-**Projekt-Skills** is a [Claude Code](https://code.claude.com) plugin that connects your **[Projekt](https://projekt.3xa.es)** organization and automates **issues, documentation, workloads, estimations and time tracking** through the Projekt REST API — sequentially, professionally, and with maximum token efficiency.
+**Projekt-Skills** is a [Claude Code](https://code.claude.com) plugin that connects your **[Projekt](https://app.projektrepublic.com)** organization and automates **issues, documentation, workloads, estimations and time tracking** through the Projekt REST API — sequentially, professionally, and with maximum token efficiency.
 
 One plugin, six skills (namespaced `projekt-skills:*`), driven by your own Personal Access Token. **Dry-run by default**: nothing is written until you confirm with `--apply`.
 
@@ -20,17 +20,14 @@ One plugin, six skills (namespaced `projekt-skills:*`), driven by your own Perso
 
 ## The skill pages
 
-(One page per skill. `projekt-context` ships in the plugin but has no page yet — its `SKILL.md` documents it.)
+(One page per skill. `pr-docs` ships in the plugin but has no page yet — its `SKILL.md` documents it.)
 
 | Skill | Page | Does |
 | --- | --- | --- |
-| **`projekt`** | [projekt (orchestrator)](Skill-projekt.md) | Owns the `CONNECT → DISCOVER → PLAN → CREATE → ASSIGN → ESTIMATE → TIME → DOCUMENT → REPORT` pipeline. Start here. |
-| **`projekt-issues`** | [projekt-issues](Skill-projekt-issues.md) | Bulk-create issues from CSV/text, assign owners, batch status moves. |
-| **`projekt-estimate`** | [projekt-estimate](Skill-projekt-estimate.md) | Fill estimates (points→hours), roadmap, plan-vs-actual roll-ups. |
-| **`projekt-workload`** | [projekt-workload](Skill-projekt-workload.md) | Read-only team capacity & workload reports. |
-| **`projekt-time`** | [projekt-time](Skill-projekt-time.md) | Batch-log time, drive timers, time roll-ups. |
-| **`projekt-docs`** | [projekt-docs](Skill-projekt-docs.md) | UPSERT project docs, regenerate issue logbooks, export PDFs. |
-| **`projekt-tokens`** | [projekt-tokens](Skill-projekt-tokens.md) | Measure a session's real token cost from the local transcripts, install the context rules, size the MCP catalogue. |
+| **`pr`** | [pr (orchestrator)](Skill-pr.md) | Connect, cache the context, then create/assign/move tasks in bulk, log time and drive the timer. Start here. |
+| **`pr-informes`** | [pr-informes](Skill-pr-informes.md) | Workload & capacity, planned-vs-actual, sprint stats, roadmap, and filling missing estimates. Read-only except `estimate --apply`. |
+| **`pr-docs`** | [pr-docs](Skill-pr-docs.md) | Documents (markdown UPSERT by title), a task's activity feed, the org export, and the AI-context store. |
+| **`pr-tokens`** | [pr-tokens](Skill-pr-tokens.md) | Measure a session's real token cost from the local transcripts, install the context rules, size the MCP catalogue. |
 
 ## Reference
 

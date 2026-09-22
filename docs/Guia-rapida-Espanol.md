@@ -1,6 +1,6 @@
 # Guía rápida (Español)
 
-**Projekt-Skills** es un plugin de [Claude Code](https://code.claude.com) que conecta tu organización de **[Projekt](https://projekt.3xa.es)** y automatiza **incidencias, documentación, cargas de trabajo, estimaciones y tiempos** vía la API REST — de forma secuencial, profesional y con el mínimo gasto de tokens.
+**Projekt-Skills** es un plugin de [Claude Code](https://code.claude.com) que conecta tu organización de **[Projekt](https://app.projektrepublic.com)** y automatiza **incidencias, documentación, cargas de trabajo, estimaciones y tiempos** vía la API REST — de forma secuencial, profesional y con el mínimo gasto de tokens.
 
 Un plugin, seis skills (`projekt-skills:*`), con tu propio Token de Acceso Personal (PAT). **Dry-run por defecto**: no se escribe nada hasta confirmar con `--apply`.
 
@@ -17,7 +17,7 @@ Un plugin, seis skills (`projekt-skills:*`), con tu propio Token de Acceso Perso
    ```
 2. **Verifica:** `/plugin` → debe aparecer **`projekt-skills`** (v0.2.1) habilitado.
 3. **Configura tu token** (ver abajo).
-4. **Úsalo:** pídele a Claude _«Conecta mi organización de Projekt y planifica un sprint con este backlog»_. La skill `projekt` se activa sola.
+4. **Úsalo:** pídele a Claude _«Conecta mi organización de Projekt y planifica un sprint con este backlog»_. La skill `pr` se activa sola.
 
 Detalle completo: [Installation](Installation.md).
 
@@ -26,7 +26,7 @@ Detalle completo: [Installation](Installation.md).
 1. En Projekt: **Organización → Ajustes → General → Integraciones → Crear API key**. Token `pjk_live_…` (se muestra una sola vez — cópialo).
 2. Entrégaselo de **una** de dos formas (la variable de entorno tiene prioridad):
    - **Entorno:** `export TREXA_API_TOKEN="pjk_live_…"`
-   - **Archivo:** `~/.config/3xa-projekt/auth.json` → `{ "token": "pjk_live_…", "api_base": "https://projekt.3xa.es/api" }`
+   - **Archivo:** `~/.config/3xa-projekt/auth.json` → `{ "token": "pjk_live_…", "api_base": "https://api.projektrepublic.com/api/v1" }`
 3. (Opcional) Fija organización: `export TREXA_ORG_ID="<uuid>"`.
 
 Trátalo como una contraseña: lleva tu rol completo en una organización. Detalle: [Configuration](Configuration.md).
@@ -35,12 +35,12 @@ Trátalo como una contraseña: lleva tu rol completo en una organización. Detal
 
 | Skill | Para qué |
 | --- | --- |
-| **`projekt`** | Orquestador. Flujo `CONECTAR → DESCUBRIR → PLANIFICAR → CREAR → ASIGNAR → ESTIMAR → TIEMPO → DOCUMENTAR → INFORMAR`. Empieza aquí. → [Skill: projekt](Skill-projekt.md) |
-| **`projekt-issues`** | Crear incidencias en lote (CSV/texto), asignar, mover de columna. → [projekt-issues](Skill-projekt-issues.md) |
-| **`projekt-estimate`** | Estimaciones (puntos→horas), hoja de ruta, planificado vs real. → [projekt-estimate](Skill-projekt-estimate.md) |
-| **`projekt-workload`** | Informes de carga/capacidad del equipo (solo lectura). → [projekt-workload](Skill-projekt-workload.md) |
-| **`projekt-time`** | Registrar tiempos en lote, temporizadores, resúmenes. → [projekt-time](Skill-projekt-time.md) |
-| **`projekt-docs`** | Documentación de proyecto, bitácoras, exportar PDF. → [projekt-docs](Skill-projekt-docs.md) |
+| **`pr`** | Orquestador. Flujo `CONECTAR → DESCUBRIR → PLANIFICAR → CREAR → ASIGNAR → ESTIMAR → TIEMPO → DOCUMENTAR → INFORMAR`. Empieza aquí. → [Skill: projekt](Skill-pr.md) |
+| **`pr`** | Crear incidencias en lote (CSV/texto), asignar, mover de columna. → [pr](Skill-pr.md) |
+| **`pr-informes`** | Estimaciones (puntos→horas), hoja de ruta, planificado vs real. → [pr-informes](Skill-pr-informes.md) |
+| **`pr-informes`** | Informes de carga/capacidad del equipo (solo lectura). → [pr-informes](Skill-pr-informes.md) |
+| **`pr`** | Registrar tiempos en lote, temporizadores, resúmenes. → [pr](Skill-pr.md) |
+| **`pr-docs`** | Documentación de proyecto, bitácoras, exportar PDF. → [pr-docs](Skill-pr-docs.md) |
 
 ## Seguridad (lo esencial)
 
@@ -55,7 +55,7 @@ Detalle: [Safety & Security](Safety-and-Security.md).
 
 Flujos completos (sembrar backlog desde CSV, planificar un sprint, equilibrar carga, cargar tiempos, documentar, llegar a cualquier endpoint) en el repo:
 
-📄 [`skills/projekt/references/recetas-es.md`](https://github.com/valfiguer/Projekt-Skills/blob/main/skills/projekt/references/recetas-es.md)
+📄 [`skills/pr/references/recetas-es.md`](https://github.com/valfiguer/Projekt-Skills/blob/main/skills/pr/references/recetas-es.md)
 
 ## Más (en inglés)
 

@@ -9,7 +9,7 @@ In Projekt, go to **Organization → Settings → General → Integraciones** an
 - Format: `pjk_live_` + 32 characters. **Shown once** — copy it immediately.
 - It carries your **full role** (owner / admin / manager / member / viewer). There is **no per-endpoint scoping** — treat it like a password.
 - Max **20 active keys** per user per org. Revoke instantly from the same screen.
-- Docs: <https://projekt.3xa.es/developers/auth.html#pat>
+- Docs: <https://developers.projektrepublic.com/developers/auth>
 
 ## 2 — Provide it to the plugin
 
@@ -19,7 +19,7 @@ Two ways. **Environment wins over file** if both are present.
 
 ```bash
 export TREXA_API_TOKEN="pjk_live_…"
-export TREXA_API_BASE="https://projekt.3xa.es/api"   # optional — this is the default
+export TREXA_API_BASE="https://api.projektrepublic.com/api/v1"   # optional — this is the default
 export TREXA_ORG_ID="<uuid>"                          # optional — else current org from /me
 ```
 
@@ -28,23 +28,23 @@ export TREXA_ORG_ID="<uuid>"                          # optional — else curren
 `~/.config/3xa-projekt/auth.json`:
 
 ```json
-{ "token": "pjk_live_…", "api_base": "https://projekt.3xa.es/api" }
+{ "token": "pjk_live_…", "api_base": "https://api.projektrepublic.com/api/v1" }
 ```
 
 ## 3 — Verify
 
 ```bash
-bash skills/projekt/scripts/auth_check.sh
+bash skills/pr/scripts/auth_check.sh
 ```
 
-It prints your user, org and role, writes `.projekt-run/context.json`, and shows only a token **fingerprint** (`pjk_live_…abcd`) — never the secret. Or just ask Claude to *"connect my Projekt org"* and the `projekt` skill runs this for you.
+It prints your user, org and role, writes `.projekt-run/context.json`, and shows only a token **fingerprint** (`pjk_live_…abcd`) — never the secret. Or just ask Claude to *"connect my Projekt org"* and the `pr` skill runs this for you.
 
 ## Environment variables
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `TREXA_API_TOKEN` | — | Your PAT. Highest-precedence source. |
-| `TREXA_API_BASE` | `https://projekt.3xa.es/api` | API base URL. Override only for staging/self-host. |
+| `TREXA_API_BASE` | `https://api.projektrepublic.com/api/v1` | API base URL. Override only for staging/self-host. |
 | `TREXA_ORG_ID` | current org from `/me` | Pin a specific organization (UUID). |
 
 ## Headers (handled for you)

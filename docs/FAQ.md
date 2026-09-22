@@ -13,10 +13,10 @@ No. The 1.3 MB spec never enters context. The [cheatsheet](API-Endpoints.md) cov
 Dedupe. Rows already present (by `(project_id,title)` or `external_ref`) are skipped. Check the dry-run table — it shows create vs skip per row. Give every row a stable `external_ref`.
 
 **Why won't my issue move to "In Progress"?**
-The assignee-required rule: an issue can't leave `Backlog`/`To Do` without an `assignee_id` (422). Assign first — [projekt-issues](Skill-projekt-issues.md) does assign-then-move automatically.
+The assignee-required rule: an issue can't leave `Backlog`/`To Do` without an `assignee_id` (422). Assign first — [pr](Skill-pr.md) does assign-then-move automatically.
 
 **The AI estimator gave story points but issues store hours — what happens?**
-[projekt-estimate](Skill-projekt-estimate.md) converts points→hours via `points_hours.json` and flags the value `ai-estimated`. On AI 503 it falls back to the median of sibling issues. See [Estimation Units](Estimation-Units.md).
+[pr-informes](Skill-pr-informes.md) converts points→hours via `points_hours.json` and flags the value `ai-estimated`. On AI 503 it falls back to the median of sibling issues. See [Estimation Units](Estimation-Units.md).
 
 **I got a 403 on a call I expected to work.**
 Cross-org. A PAT is bound to one organization; the resource belongs to another. Switch org/token. It's not retried by design. See [Errors & Troubleshooting](Errors-and-Troubleshooting.md).
@@ -34,6 +34,6 @@ Yes — set `TREXA_API_TOKEN` (and `TREXA_ORG_ID`) as env vars. Env wins over th
 Yes. Every skill is bilingual (EN/ES). See [Guía rápida (Español)](Guia-rapida-Espanol.md) and the bundled `recetas-es.md`.
 
 **How do I reach an endpoint the cheatsheet doesn't list?**
-`bash skills/projekt/scripts/spec_lookup.sh --search "<term>"` to find it, then `spec_lookup.sh "/path" <method>` to read one block. Domain map on [API Endpoints](API-Endpoints.md#full-surface-domain-map).
+`bash skills/pr/scripts/spec_lookup.sh --search "<term>"` to find it, then `spec_lookup.sh "/path" <method>` to read one block. Domain map on [API Endpoints](API-Endpoints.md#full-surface-domain-map).
 
 Still stuck? → [Errors & Troubleshooting](Errors-and-Troubleshooting.md).

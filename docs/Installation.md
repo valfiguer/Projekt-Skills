@@ -62,7 +62,7 @@ Ask Claude in plain language:
 
 > _"Connect my Projekt org and plan a sprint from this backlog."_
 
-The `projekt` skill auto-activates and walks the [pipeline](Skill-projekt.md#the-pipeline). Everything is **dry-run by default** — nothing is written until you confirm.
+The `pr` skill auto-activates and walks the [pipeline](Skill-pr.md#the-pipeline). Everything is **dry-run by default** — nothing is written until you confirm.
 
 ## Update / remove
 
@@ -76,7 +76,7 @@ The `projekt` skill auto-activates and walks the [pipeline](Skill-projekt.md#the
 | Symptom | Fix |
 | --- | --- |
 | `/plugin install` says the marketplace is unknown | Run `/plugin marketplace add valfiguer/Projekt-Skills` first; install uses `@3xa-projekt`, the **marketplace** name, not the repo. |
-| Plugin installed but skills never trigger | Confirm it shows **enabled** in `/plugin`. Then check your token resolves — ask Claude to "connect my Projekt org", or run `bash skills/projekt/scripts/auth_check.sh`. |
+| Plugin installed but skills never trigger | Confirm it shows **enabled** in `/plugin`. Then check your token resolves — ask Claude to "connect my Projekt org", or run `bash skills/pr/scripts/auth_check.sh`. |
 | `jq: command not found` / `python3: command not found` | Install the missing tool, then reopen Claude Code so the new `PATH` is picked up. |
 | `401 Unauthorized` on first call | Token missing, expired, or malformed. See [Configuration](Configuration.md); a valid token starts with `pjk_live_`. |
 | `403` on a call you expected to work | Cross-org: a PAT is bound to one organization. See [Errors & Troubleshooting](Errors-and-Troubleshooting.md). |

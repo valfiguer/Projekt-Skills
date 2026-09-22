@@ -1,10 +1,10 @@
 # Estimation Units — story points → hours
 
-**The trap:** `POST /ai/suggest-estimation` returns **story_points only**, but issues store `estimated_hours`. You must convert — and you must flag AI-derived values for human review. The [projekt-estimate](Skill-projekt-estimate.md) skill does both automatically.
+**The trap:** `POST /ai/suggest-estimation` returns **story_points only**, but issues store `estimated_hours`. You must convert — and you must flag AI-derived values for human review. The [pr-informes](Skill-pr-informes.md) skill does both automatically.
 
 ## The conversion table
 
-`skills/projekt/assets/points_hours.json` is the **single source of truth**, calibrated to the 3XA org's real estimate distribution (428 estimated issues; median 3 h, p90 10 h — mostly small tasks):
+`skills/pr/assets/points_hours.json` is the **single source of truth**, calibrated to the 3XA org's real estimate distribution (428 estimated issues; median 3 h, p90 10 h — mostly small tasks):
 
 | Points | Hours |
 | --- | --- |
@@ -33,10 +33,10 @@ This org records estimates in **hours**, not story points (0 issues carry points
 To recalibrate:
 
 1. Compare planned vs logged hours (`/time-summary`, `/workload`) — or just the `estimated_hours` distribution.
-2. Edit `skills/projekt/assets/points_hours.json`.
+2. Edit `skills/pr/assets/points_hours.json`.
 
-That file is read by `projekt-estimate` on every run — no code change needed.
+That file is read by `pr-informes` on every run — no code change needed.
 
 > History: v0.2.1 replaced the original Fibonacci defaults (1 pt = 2 h … 21 pt = 96 h), which ran ~3× high for this org. See [Changelog](Changelog.md).
 
-See also: [Skill: projekt-estimate](Skill-projekt-estimate.md).
+See also: [Skill: pr-informes](Skill-pr-informes.md).
