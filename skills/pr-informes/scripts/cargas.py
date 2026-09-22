@@ -4,27 +4,32 @@
 Three server-side aggregates, merged on user_id. The script does ALL the
 arithmetic, so the model spends no tokens on numbers and writes nothing.
 
-    GET /organizations/{org}/workforce/capacity
+    GET /organizations/{org}/workforce/capacity?week_start=YYYY-MM-DD   (REQUIRED)
         → {week_start, week_end, rows:[{user_id,name,employee_id,expected_hours,
            expected_source,holiday_hours,absence_hours,net_expected_hours,logged_hours}]}
+        `week_start` is ANY date inside the wanted week; the server normalizes it to
+        that week's first day using the organization's own `week_start_day`, which is
+        not necessarily Monday. Omitting it is a 422, not a default.
     GET /organizations/{org}/time-entries/summary?from&to&group_by=user
         → {total_minutes, billable_minutes, entries_count, groups:[{user_id,total_minutes,…}]}
     GET /organizations/{org}/dashboard/stats
         → {..., workload:[{user_id,name,assigned,done}], ...}
 
-THE RANGE TRAP — read before labelling any output:
-  · /workforce/capacity takes NO parameters. It always answers for the CURRENT
-    week and says which one in week_start/week_end. You cannot ask it about June.
-  · /dashboard/stats takes NO parameters either: its `assigned`/`done` counts are
-    ALL-HISTORY, not the window. Printing them under a "June 1–7" heading is a lie.
-  · Only /time-entries/summary honours --from/--to.
-  This script therefore labels every column with the period it really covers, and
-  --from/--to change ONLY the logged-hours column. That is a property of the API,
-  not a limitation of the report.
+THE RANGE TRAP — read before labelling any output. The three sources do NOT
+cover the same period, and two of them cannot be made to:
+  · /workforce/capacity covers exactly ONE WEEK — the one containing `week_start`,
+    snapped to the org's own first day of the week. It cannot cover a month.
+  · /dashboard/stats takes NO parameters at all: its `assigned`/`done` counts are
+    ALL-HISTORY. Printing them under a "September" heading states something the
+    data does not say.
+  · Only /time-entries/summary honours an arbitrary --from/--to.
+This script therefore labels every column with the period it really covers, and
+marks the all-history ones. When --from/--to span more than a week, the capacity
+column still describes the week that --from falls in, and the header says so.
 
 Utilization = logged hours in the window ÷ net expected hours for the capacity
-week (expected minus holidays and absences). With --from/--to spanning something
-other than one week the ratio compares different spans — the header says so.
+week (expected minus holidays and absences). Comparing a month of logged hours
+against one week of capacity is meaningless, so the header flags that too.
 
 stdlib only · Python 3.10+ · GET-only, no --apply, always safe to re-run.
 """
@@ -67,7 +72,8 @@ def _f(v, default=0.0) -> float:
 
 
 def fetch(c: Client, date_from: str, date_to: str) -> dict:
-    cap = c.get_json("/organizations/%s/workforce/capacity" % c.org)
+    # week_start is REQUIRED (422 without it) and may be any date inside the week.
+    cap = c.get_json("/organizations/%s/workforce/capacity?week_start=%s" % (c.org, date_from))
     summ = c.get_json("/organizations/%s/time-entries/summary?from=%s&to=%s&group_by=user"
                       % (c.org, date_from, date_to))
     try:
@@ -142,7 +148,8 @@ def render_markdown(rows, cap, args, org) -> str:
     out = [
         "# Workload & capacity — org %s" % org,
         "",
-        "- **Capacity week** (from the server, not selectable): `%s`" % wk,
+        "- **Capacity week** (the week `--from` falls in, snapped to this org's first "
+        "day of the week): `%s`" % wk,
         "- **Logged-hours window** (`--from`/`--to`): `%s → %s`" % (args.date_from, args.date_to),
         "- **Assigned / Done**: all-history counts from `dashboard/stats` — that endpoint takes no",
         "  date range, so these two columns are NOT scoped to the window above.",
@@ -159,6 +166,17 @@ def render_markdown(rows, cap, args, org) -> str:
             "—" if r["assigned"] is None else r["assigned"],
             "—" if r["done"] is None else r["done"],
             flag(u, args.over, args.under)))
+    span_note = ""
+    try:
+        d0 = dt.date.fromisoformat(args.date_from); d1 = dt.date.fromisoformat(args.date_to)
+        if (d1 - d0).days > 7:
+            span_note = ("\n> **The two spans differ.** Logged hours cover %d days; capacity covers "
+                         "the single week `%s`. Utilization below compares them anyway, so read it "
+                         "as a ratio, not a percentage of that week." % ((d1 - d0).days + 1, wk))
+    except ValueError:
+        pass
+    if span_note:
+        out.insert(len(out) - 2, span_note)
     tot_log = sum(r["logged_window"] for r in rows)
     tot_net = sum(r["net_expected"] for r in rows)
     out += ["", "**Team:** %.1f h logged in the window · %.1f h net expected for the capacity week"

@@ -26,6 +26,20 @@ no-op, not a failure. `stop` does not take a task: it reads `/time-entries/activ
 entry id. A `--note` on stop is applied with a follow-up PATCH, because the stop endpoint takes
 no body.
 
+## The parameters are `from` / `to`, and a wrong name is silent
+
+Measured against production on 2026-09-22:
+
+| Query | Answer |
+|---|---|
+| `?group_by=user` | 77.587 min — **all history** |
+| `?from=2026-09-15&to=2026-09-21&group_by=user` | 37.432 min, and the response echoes `from_date`/`to_date` |
+| `?date_from=…&date_to=…&group_by=user` | **77.587 min** — the range was dropped without a word |
+
+An unknown query parameter is ignored, not rejected, so `date_from` silently widens the
+answer to everything ever logged. **Always check the `from_date`/`to_date` the response
+echoes back**: `null` there means no range was applied, whatever you thought you sent.
+
 ## Totals come from the server
 
 `tiempo.py summary` calls `/time-entries/summary`, which sums server-side. Per-task totals have

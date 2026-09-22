@@ -3,6 +3,41 @@
 All notable changes to **projekt-skills** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] — 2026-09-22
+
+Primera ejecución con un PAT que llega a datos reales (Valfiguer Inc., 22 proyectos,
+8 miembros). Salieron dos cosas que ninguna lectura del contrato habría encontrado.
+
+### Fixed — `workforce/capacity` exige `week_start`
+
+`cargas.py` daba **422 `query.week_start: Field required`** en la primera llamada real. El
+parámetro es obligatorio, admite cualquier fecha de la semana y el servidor la normaliza al
+primer día de esa semana según el `week_start_day` **de la organización**, que no tiene por
+qué ser lunes.
+
+**El contrato escrito a mano dice que no tiene parámetros. Miente.** El spec que sirve FastAPI
+y `apps/api/app/modules/workforce/router.py` coinciden en que es obligatorio — o sea, es drift
+del contrato de Next Projekt, no del plugin. Corregido aquí y anotado en `endpoints.md`.
+
+Consecuencia documental: lo que la v1.1.0 llamaba «la capacidad no se puede elegir» era falso.
+Sí se elige, **pero por semanas**, no por rango libre. Corregido en `pr-informes/SKILL.md`,
+`references/endpoints.md` y `docs/Skill-pr-informes.md`; el informe avisa ahora cuando la
+ventana de horas imputadas y la semana de capacidad no se parecen.
+
+### Added — un parámetro mal escrito no falla, ensancha
+
+Medido contra producción el 22/09 sobre la misma organización:
+
+| Consulta a `/time-entries/summary` | Respuesta |
+| --- | --- |
+| `?group_by=user` | 77.587 min — **todo el histórico** |
+| `?from=2026-09-15&to=2026-09-21&group_by=user` | 37.432 min, con `from_date`/`to_date` en la respuesta |
+| `?date_from=…&date_to=…&group_by=user` | **77.587 min** — el rango se cayó sin decir nada |
+
+Un parámetro desconocido se ignora, no se rechaza. `date_from` devuelve todo lo imputado
+desde siempre y parece un dato del periodo. **Mira siempre el `from_date`/`to_date` que
+devuelve la respuesta**: si viene `null`, no se aplicó rango. En `references/time.md`.
+
 ## [1.1.0] — 2026-09-22
 
 ### Added — el catálogo completo, generado
