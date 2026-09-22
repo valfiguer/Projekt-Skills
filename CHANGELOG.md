@@ -3,6 +3,45 @@
 All notable changes to **projekt-skills** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-09-22
+
+### Added — el catálogo completo, generado
+
+El plugin ya no cubre «una parte del API y el resto búscatelo». Ahora hay un mapa de todo,
+y una forma segura de llamar a cualquier cosa del mapa.
+
+- **`skills/pr/references/catalogo.md`** — **685 paths · 917 operaciones · 16 dominios**, con
+  cuántas son sensibles y cuántas cubre ya un script `pr-*` (80). Lo **genera**
+  `scripts/catalogo.py` desde el spec: no se teclea, así que no se pudre. La doc anterior sí
+  se pudrió, hasta el punto de que cinco de las ocho skills apuntaban a endpoints muertos.
+- **`scripts/llamar.py`** — llama a cualquiera de las 917. Valida ruta y método contra el spec
+  **antes de enviar** (una ruta mal escrita falla en local, con sugerencias, en vez de dar un
+  404 que luego hay que depurar), es dry-run para todo lo que no sea GET, **rechaza las
+  operaciones sensibles y todo `DELETE` sin `--admit`**, y trunca la respuesta a 4.000
+  caracteres porque un listado volcado en la transcripción se paga en cada turno posterior.
+- **`spec_lookup.sh` gana filtros**: `--domains`, `--domain <d>`, `--tag <t>`, `--sensitive`,
+  `--uncovered`. El índice pasa de 3 a 8 columnas (método, ruta, dominio, perfil, sensible,
+  tags, script que la cubre, resumen): 917 líneas, 84 kB, para grepear, nunca para leer.
+
+De las 917 operaciones, **358 llevan `x-tool`** (las que el conector MCP puede exponer) y
+**128 están marcadas sensibles**. Las otras **559 no tienen `x-tool`**: funcionan por HTTP
+igual que el resto, pero son invisibles para el catálogo del MCP, para la selección por perfil
+y para Kern. El catálogo las lista aparte, por tag, para que se vea qué falta anotar.
+
+### Fixed
+
+- `llamar.py` construía `/api/v1/api/v1/…`: los paths del spec ya traen el prefijo y la base
+  del cliente también. Daba un 404 que se leía como «ese endpoint no existe».
+- `references/domains.md`, escrito a mano y ya desfasado, se retira: lo sustituye el catálogo
+  generado.
+
+### Nota sobre de dónde sale el `x-tool`
+
+`fetch_spec.sh` descarga de `developers.projektrepublic.com/openapi.json` **a propósito**. El
+spec que sirve FastAPI (`api.projektrepublic.com/api/openapi.json`) tiene los mismos 685 paths
+pero **cero `x-tool`** — FastAPI descarta la extensión. Un catálogo construido desde ahí no
+tendría dominios ni sensibilidad: 16 columnas vacías.
+
 ## [1.0.0] — 2026-09-22
 
 Dos cambios que rompen: el host y los nombres de las skills. Y un tercero que no rompe pero
