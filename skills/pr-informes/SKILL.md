@@ -28,20 +28,27 @@ python3 "$SK/cargas.py" --over 90 --under 40
 python3 "$SK/cargas.py" --json
 ```
 
-**The range trap — the whole reason this report is shaped the way it is.** Three aggregates,
-and only one of them takes dates:
+**The range trap — the whole reason this report is shaped the way it is.** The three
+aggregates do not cover the same period, and two of them cannot be made to:
 
-| Source | Covers | Takes `from`/`to`? |
+| Source | Covers | Range? |
 |---|---|---|
-| `/workforce/capacity` | the **current week**, and it says which | **No parameters** |
-| `/dashboard/stats` → `workload[]` | **all history** (assigned/done counts) | **No parameters** |
-| `/time-entries/summary` | exactly the window you ask for | Yes |
+| `/workforce/capacity` | exactly **ONE WEEK** | `week_start` is **required** (422 without it); any date inside the week, snapped to the org's own first day of the week — not a fixed Monday |
+| `/dashboard/stats` → `workload[]` | **all history** (assigned/done counts) | **No parameters at all** |
+| `/time-entries/summary` | exactly the window asked for | `from` / `to` |
 
-So `--from`/`--to` move **only** the logged-hours column. The report labels every column with
-the period it really covers, and marks the all-history ones with `*`. Printing
-`dashboard/stats` counts under a "June 1–7" heading would be a lie — that mistake has been
-made before. Utilization = logged hours in the window ÷ net expected hours (expected minus
-holidays and absences) for the capacity week.
+So `--from` picks the capacity week *and* opens the logged-hours window; `--to` moves only the
+latter. When the two spans differ by more than a week the report says so in a callout, because
+comparing a month of logged hours against one week of capacity is meaningless. Counts from
+`dashboard/stats` are marked `*`: printing them under a "June 1–7" heading would state
+something the data does not say.
+
+**A second trap, measured:** `/time-entries/summary` ignores an unknown query parameter
+silently. `date_from`/`date_to` (instead of `from`/`to`) returns **all history** without a
+word. Check the `from_date`/`to_date` the response echoes: `null` means no range was applied.
+
+Utilization = logged hours in the window ÷ net expected hours (expected minus holidays and
+absences) for the capacity week.
 
 ## Estimates & plan-vs-actual
 

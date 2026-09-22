@@ -54,9 +54,9 @@ Detail → `time.md`.
 ## Aggregates (all read-only)
 | Method · Path | Gives | The range trap |
 |---|---|---|
-| `GET /organizations/{org}/workforce/capacity` | `{week_start, week_end, rows[{user_id, name, expected_hours, net_expected_hours, holiday_hours, absence_hours, logged_hours}]}` | **No parameters.** Always the CURRENT week, and it says which one. |
+| `GET /organizations/{org}/workforce/capacity?week_start=YYYY-MM-DD` | `{week_start, week_end, rows[{user_id, name, expected_hours, net_expected_hours, holiday_hours, absence_hours, logged_hours}]}` | **`week_start` is REQUIRED** — 422 without it. Any date inside the week; the server snaps it to that week's first day using the org's `week_start_day`, which need not be Monday. Covers ONE week. ⚠ The hand-authored contract still declares no parameters here; the served spec and the code are right. |
 | `GET /organizations/{org}/dashboard/stats` | `{issues{}, projects{}, priority[], workload[{user_id,name,assigned,done}], finance{}, tasks_trend[], my_tasks[], most_active_projects[]}` | **No parameters.** Counts are ALL-HISTORY — labelling them with a period is a lie. |
-| `GET /organizations/{org}/time-entries/summary` | logged minutes | The only one that honours `from`/`to`. |
+| `GET /organizations/{org}/time-entries/summary` | logged minutes | The only one taking an arbitrary range, and the names are **`from`/`to`**. An unknown parameter is ignored silently, so `date_from` returns all history — check the echoed `from_date`/`to_date`. |
 | `GET …/projects/{proj}/sprints` · `…/sprints/{sid}/stats` · `/organizations/{org}/sprints/{sid}/burndown` | Sprint progress | |
 | `GET /organizations/{org}/roadmap` | Org roadmap | **Read-only — no POST exists.** |
 

@@ -23,14 +23,15 @@ There is no `--apply`: the report is read-only by construction.
 
 Three aggregates feed the report and **only one takes dates**:
 
-| Source | Covers | Accepts `from`/`to`? |
+| Source | Covers | Range |
 |---|---|---|
-| `GET …/workforce/capacity` | the current week, and it names it in `week_start`/`week_end` | **No parameters at all** |
+| `GET …/workforce/capacity` | exactly **one week** | `week_start` **required** (422 without it); any date inside the week, snapped to the org's own first day of the week |
 | `GET …/dashboard/stats` → `workload[]` | **all history** (assigned / done counts) | **No parameters at all** |
-| `GET …/time-entries/summary` | exactly the window asked for | Yes |
+| `GET …/time-entries/summary` | the window asked for | `from` / `to` — and an unknown name like `date_from` is **ignored silently**, returning all history |
 
-`--from`/`--to` therefore move only the logged-hours column. The report labels each column
-with the period it really covers and marks all-history columns with `*`. Presenting
+`--from` picks the capacity week and opens the logged window; `--to` moves only the latter.
+The report labels each column with the period it really covers, marks all-history columns with
+`*`, and adds a callout when the two spans differ by more than a week. Presenting
 `dashboard/stats` counts under a date heading states something the data does not say.
 
 Utilization = logged hours in the window ÷ net expected hours (expected minus holidays and
