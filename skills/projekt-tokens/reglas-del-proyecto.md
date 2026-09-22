@@ -17,9 +17,10 @@ una con la cifra que la justifica.
 4. **MCP: `fields` con los campos que hacen falta, `limit` pequeño y `cursor` para
    seguir.** — *`list_issues` sin recortar llega a 37.000 caracteres por llamada; con
    `fields`, baja a ~3.000.*
-5. **El conector, por dominios**: `?tools=org,search,tasks` en la URL, no `all`. — *el
-   catálogo completo son ~130.600 tokens en cada `tools/list`; el perfil por dominios,
-   ~30.000.*
+5. **El conector, por dominios**: `?tools=pm` o `?tools=finance,crm` en la URL, no `all`
+   (`org` y `search` entran siempre). — *el catálogo entero son ~140.000 tokens estimados
+   en cada `tools/list` y `core` ~31.000; comprueba el tuyo con `projekt-tokens perfil`,
+   porque dos dominios gordos pueden salir más caros que `core`.*
 6. **Sesión nueva cuando la lectura por turno pase de 200.000.** Se mira con
    `projekt-tokens medir --breve`. — *por encima de ahí cada turno cuesta más que el
    trabajo que hace.*
